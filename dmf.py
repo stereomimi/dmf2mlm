@@ -2,6 +2,7 @@
 
 from enum import Enum
 from dataclasses import dataclass
+import zlib
 
 ######################## INSTRUMENT ########################
 
@@ -114,8 +115,15 @@ class System(Enum):
 	NEOGEO		= 0x09
 	NEOGEO_EXT	= 0x49
 
+class FramesMode(Enum):
+	PAL = 0
+	NTSC = 1
+
 # This is not a 1:1 match, some redundant things are simplified
 class Module:
+	data: bytes   # uncompressed data
+	head_ofs = 18 # used to calculate addresses in the DMF data
+
 	# Format flags
 	version: int
 
@@ -123,8 +131,8 @@ class Module:
 	system: System
 
 	# Visual information
-	song_name = ""
-	song_author = ""
+	song_name: str
+	song_author: str
 
 	# Module information
 	time_base: int
@@ -133,7 +141,7 @@ class Module:
 	hz_value: int
 	rows_per_pattern: int
 	rows_in_pattern_matrix: int
-	pattern_matrix: [[int]] # pattern_matrix[channel][row]
+	pattern_matrix: [[int]]  = [] # pattern_matrix[channel][row]
 
 	# Instruments data
 	instruments: [Instrument] = []
@@ -146,3 +154,61 @@ class Module:
 
 	# Sample data
 	samples: [Sample]
+
+	def __init__(self, compressed_data: bytes):
+		self.data = zlib.decompress(compressed_data)
+		if not self.check_file():
+			raise RuntimeError("Corrupted DMF file")
+
+		self.parse_format_flags_and_system()
+		self.parse_visual_info()
+		self.parse_module_info()
+		self.parse_pattern_matrix()
+
+	def check_file(self):
+		format_string = self.data[0:16].decode(encoding='ascii')
+		return format_string == ".DelekDefleMask."
+
+	def parse_format_flags_and_system(self):
+		self.version = self.data[16]
+		self.system = System(self.data[17])
+		if self.system != System.NEOGEO:
+			raise RuntimeError("Unsupported system (must be NeoGeo)")
+
+	def parse_visual_info(self):
+		name_len = self.data[self.head_ofs]
+		self.song_name = self.data[self.head_ofs+1:self.head_ofs+1+name_len].decode(encoding='ascii')
+		self.head_ofs += 1 + name_len
+
+		author_len = self.data[self.head_ofs]
+		self.song_author = self.data[self.head_ofs+1:self.head_ofs+1+author_len].decode(encoding='ascii')
+		self.head_ofs += 1 + author_len + 2 # Ignore highlight information
+
+	def parse_module_info(self):
+		self.time_base = self.data[self.head_ofs]
+		self.tick_time_1 = self.data[self.head_ofs+1]
+		self.tick_time_2 = self.data[self.head_ofs+2]
+		
+		frames_mode = FramesMode(self.data[self.head_ofs+3])
+		using_custom_hz = bool(self.data[self.head_ofs+4])
+		if using_custom_hz:
+			self.hz_value = int(str(self.data[self.head_ofs+5]), 16)
+		else:
+			if frames_mode == FramesMode.PAL: self.hz_value = 50
+			else: self.hz_value = 60
+
+		self.rows_per_pattern = self.data[self.head_ofs+8]
+		self.rows_per_pattern |= self.data[self.head_ofs+9] << 8
+		self.rows_per_pattern |= self.data[self.head_ofs+10] << 16
+		self.rows_per_pattern |= self.data[self.head_ofs+11] << 24
+		self.rows_in_pattern_matrix = self.data[self.head_ofs+12]
+		self.head_ofs += 13
+
+	def parse_pattern_matrix(self):
+		SYSTEM_TOTAL_CHANNELS = 13
+		for ch in range(SYSTEM_TOTAL_CHANNELS):
+			rows = []
+			for row in range(self.rows_in_pattern_matrix):
+				rows.append(self.data[self.head_ofs])
+				self.head_ofs += 1
+			self.pattern_matrix.append(rows)
