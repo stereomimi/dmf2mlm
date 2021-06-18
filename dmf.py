@@ -6,10 +6,13 @@ import zlib
 
 ######################## INSTRUMENT ########################
 
-class Instrument:
-	name = ""
+class InstrumentType(Enum):
+	STD = 0
+	FM = 1
 
-@dataclass
+class Instrument:
+	name: str
+	size: int
 class FMOperator:
 	am: bool
 	ar: int
@@ -25,25 +28,108 @@ class FMOperator:
 	ssg_enabled: bool
 	ssg_mode: int
 
+	def __init__(self, data: bytes):
+		self.am = bool(data[0])
+		self.ar = data[1]
+		self.dr = data[2]
+		self.mult = data[3]
+		self.rr = data[4]
+		self.sl = data[5]
+		self.tl = data[6]
+		self.dt2 = data[7]
+		self.rs = data[8]
+		self.dt = data[9] - 3
+		self.d2r = data[10]
+		self.ssg_enabled = bool(data[11] & 8)
+		self.ssg_mode = data[11] & 7
+
 class FMInstrument(Instrument):
-	algorithm = 0
-	feedback = 0
-	fms = 0
-	ams = 0
+
+	algorithm: int
+	feedback: int
+	fms: int
+	ams: int
 
 	operators: [FMOperator] = [] # should have 4 operators
 
-@dataclass
+	def __init__(self, data: bytes):
+		OP_COUNT = 4
+		OP_SIZE = 12
+
+		self.operators = []
+
+		head_ofs = 0
+		name_len = data[head_ofs]
+		self.name = data[head_ofs+1:head_ofs+1+name_len].decode(encoding='ascii')
+		head_ofs += name_len+2 # Skip instrument mode, it must be FM
+
+		self.algorithm = data[head_ofs]
+		self.feedback = data[head_ofs+1]
+		self.fms = data[head_ofs+2]
+		self.ams = data[head_ofs+3]
+		head_ofs += 4
+
+		for i in range(OP_COUNT):
+			self.operators.append(FMOperator(data[head_ofs:]))
+			head_ofs += OP_SIZE
+
+		self.size = head_ofs
+
 class STDMacro:
 	envelope_values: [int]
 	loop_position: int
+	loop_enabled: bool
+	size: int
+
+	def __init__(self, data: bytes, value_ofs: int = 0):
+		head_ofs = 0
+		envelope_size = data[head_ofs]
+		if envelope_size > 127:
+			raise RuntimeError(f"Corrupted envelope size (valid range is 0-127; envelope size is {envelope_size}")
+		head_ofs += 1
+
+		self.envelope_values = []
+		for i in range(envelope_size):
+			print("\t",i)
+			value = data[head_ofs]
+			value |= data[head_ofs+1] << 8
+			value |= data[head_ofs+2] << 16
+			value |= data[head_ofs+3] << 24
+			self.envelope_values.append(value+value_ofs)
+			head_ofs += 4
+
+		self.loop_position = data[head_ofs]
+		self.loop_enabled = self.loop_position >= 0 and self.loop_position < envelope_size
+		self.size = head_ofs+1
+
+class STDArpeggioMode(Enum):
+	NORMAL = 0
+	FIXED = 1
 
 class STDInstrument(Instrument):
-	voluje_macro: STDMacro
+	volume_macro: STDMacro
 	arpeggio_macro: STDMacro
+	arpeggio_mode: STDArpeggioMode
 	noise_macro: STDMacro
-	wavetable_macro: STDMacro # This is probably a channel mode macro on the neogeo
+	chmode_macro: STDMacro # This is probably a channel mode macro on the neogeo
 
+	def __init__(self, data: bytes):
+		head_ofs = 0
+		name_len = data[head_ofs]
+		self.name = data[head_ofs+1:head_ofs+1+name_len].decode(encoding='ascii')
+		head_ofs += name_len+2 # Skip instrument mode, it must be STD
+
+		self.volume_macro = STDMacro(data[head_ofs:])
+		head_ofs += self.volume_macro.size
+		self.arpeggio_macro = STDMacro(data[head_ofs:], -12)
+		head_ofs += self.arpeggio_macro.size
+		self.arpeggio_mode = STDArpeggioMode(data[head_ofs])
+		self.noise_macro = STDMacro(data[head_ofs+1:])
+		head_ofs += self.noise_macro.size+1
+		self.chmode_macro = STDMacro(data[head_ofs:])
+		head_ofs += self.chmode_macro.size
+
+		self.size = head_ofs
 
 ######################## PATTERN ########################
 
@@ -164,6 +250,8 @@ class Module:
 		self.parse_visual_info()
 		self.parse_module_info()
 		self.parse_pattern_matrix()
+		self.parse_instruments()
+		self.parse_wavetables()
 
 	def check_file(self):
 		format_string = self.data[0:16].decode(encoding='ascii')
@@ -212,3 +300,27 @@ class Module:
 				rows.append(self.data[self.head_ofs])
 				self.head_ofs += 1
 			self.pattern_matrix.append(rows)
+
+	def parse_instruments(self):
+		FM_INSTRUMENT_SIZE = 52
+		instrument_count = self.data[self.head_ofs]
+		self.head_ofs += 1
+
+		for i in range(instrument_count):
+			name_len = self.data[self.head_ofs]
+			instrument_type = InstrumentType(self.data[self.head_ofs+1+name_len])
+			instrument: Instrument
+
+			if instrument_type == InstrumentType.FM:
+				instrument = FMInstrument(self.data[self.head_ofs:])
+			else: # STD instrument
+				instrument = STDInstrument(self.data[self.head_ofs:])
+
+			self.instruments.append(instrument)
+			self.head_ofs += instrument.size
+
+	def parse_wavetables(self):
+		wavetable_count = self.data[self.head_ofs]
+		if wavetable_count != 0:
+			raise RuntimeError("Wavetables aren't supported")
+		self.head_ofs += 1
