@@ -256,19 +256,39 @@ class Pattern:
 
 ######################## SAMPLE ########################
 
-class SampleWidth(Enum):
+class SampleWidth(IntEnum):
 	BYTE = 8
 	WORD = 16
 
-@dataclass
 class Sample:
-	size: int
-	name = ""
-	sample_rate: int # Should always be 18.5Khz for ADPCMA samples
+	sample_size: int
+	name: str
+	#rate: int # Should always be 18.5Khz for ADPCMA samples; ignored
 	pitch: int
 	amplitude: int
 	bits: SampleWidth
 	data: [int]
+	dmf_size: int # Size in the DMF samples data, including name, rate, pitch, etc...
+
+	def __init__(self, data: bytes):
+		head_ofs = 0
+		self.sample_size = int.from_bytes(data[head_ofs:head_ofs+3], byteorder='little', signed=False)
+		name_len = data[head_ofs+4]
+		self.name = data[head_ofs+5:head_ofs+5+name_len].decode(encoding='ascii')
+		head_ofs += 6+name_len # ignore sample rate
+
+		self.pitch = data[head_ofs] - 5
+		self.amplitude = (data[head_ofs+1] - 50) * 2
+		self.bits = SampleWidth(data[head_ofs+2])
+		head_ofs += 3
+
+		self.data = []
+		for _ in range(self.sample_size):
+			value = data[head_ofs] | (data[head_ofs+1] << 8)
+			self.data.append(value)
+			head_ofs += 2
+
+		self.dmf_size = head_ofs
 
 ######################## MODULE ########################
 
@@ -337,6 +357,7 @@ class Module:
 		self.parse_instruments()
 		self.parse_wavetables()
 		self.parse_patterns()
+		self.parse_samples()
 
 	def check_file(self):
 		format_string = self.data[0:16].decode(encoding='ascii')
@@ -422,3 +443,13 @@ class Module:
 				channel_patterns.append(pattern)
 				self.head_ofs += self.rows_per_pattern * (BASE_ROW_SIZE + EFFECT_SIZE*effect_count)
 			self.patterns.append(channel_patterns)
+
+	def parse_samples(self):
+		sample_count = self.data[self.head_ofs]
+		self.samples = []
+		self.head_ofs += 1
+
+		for _ in range(sample_count):
+			sample = Sample(self.data[self.head_ofs:])
+			self.samples.append(sample)
+			self.head_ofs += sample.dmf_size

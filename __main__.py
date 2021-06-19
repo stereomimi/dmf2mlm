@@ -74,6 +74,16 @@ def print_debug_info(module: dmf.Module):
 			print_std_macro(instrument.noise_macro)
 			print("\tChannel Mode Macro")
 			print_std_macro(instrument.chmode_macro)
+	print("")
+
+	print("=========== Samples ===========")
+	for i in range(len(module.samples)):
+		sample = module.samples[i]
+		print(f"{i}: {sample.name}")
+		print("\tsize:", sample.sample_size)
+		print("\tpitch:", sample.pitch)
+		print("\tamp:", sample.amplitude)
+		print("\tbits:", sample.bits.name)
 
 def print_pattern(pattern: dmf.Pattern):
 	note_labels = ["C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-", "C-"]
@@ -118,8 +128,9 @@ module: dmf.Module
 with open(sys.argv[1], "rb") as file:
 	module = dmf.Module(file.read())
 
-channel = int(sys.argv[2])
-pat_id  = int(sys.argv[3])
+print_debug_info(module)
 
-print_pattern(module.patterns[channel][pat_id])
-#print_debug_info(module)
+#channel = int(sys.argv[2])
+#pat_id  = int(sys.argv[3])
+#print_pattern(module.patterns[channel][pat_id])
+
