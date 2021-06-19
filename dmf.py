@@ -1,8 +1,17 @@
 # Mainly made to support the Neogeo mode
 
-from enum import Enum
+from enum import Enum, IntEnum
 from dataclasses import dataclass
+from typing import Optional
 import zlib
+
+######################## CONSTANTS ########################
+
+SYSTEM_TOTAL_CHANNELS = 13 # NEOGEO
+FM_OP_COUNT = 4
+FM_OP_SIZE = 12
+BASE_ROW_SIZE = 8 # Without effects
+EFFECT_SIZE = 4
 
 ######################## INSTRUMENT ########################
 
@@ -13,6 +22,7 @@ class InstrumentType(Enum):
 class Instrument:
 	name: str
 	size: int
+
 class FMOperator:
 	am: bool
 	ar: int
@@ -53,9 +63,6 @@ class FMInstrument(Instrument):
 	operators: [FMOperator] = [] # should have 4 operators
 
 	def __init__(self, data: bytes):
-		OP_COUNT = 4
-		OP_SIZE = 12
-
 		self.operators = []
 
 		head_ofs = 0
@@ -69,9 +76,9 @@ class FMInstrument(Instrument):
 		self.ams = data[head_ofs+3]
 		head_ofs += 4
 
-		for i in range(OP_COUNT):
+		for i in range(FM_OP_COUNT):
 			self.operators.append(FMOperator(data[head_ofs:]))
-			head_ofs += OP_SIZE
+			head_ofs += FM_OP_SIZE
 
 		self.size = head_ofs
 
@@ -133,7 +140,7 @@ class STDInstrument(Instrument):
 
 ######################## PATTERN ########################
 
-class Note(Enum):
+class Note(IntEnum):
 	EMPTY = 0
 	CS = 1
 	D  = 2
@@ -149,26 +156,103 @@ class Note(Enum):
 	C  = 12
 	NOTE_OFF = 100
 
-class EffectCode(Enum):
-	EMPTY = -1
+class EffectCode(IntEnum):
+	EMPTY                       = 0xFFFF
+	ARPEGGIO                    = 0x00
+	PORTAMENTO_UP               = 0x01
+	PORTAMENTO_DOWN             = 0x02
+	PORTA_TO_NOTE               = 0x03
+	VIBRATO                     = 0x04
+	PORTA_TO_NOTE_AND_VOL_SLIDE = 0x05
+	VIBRATO_AND_VOL_SLIDE       = 0x06
+	TREMOLO                     = 0x07
+	PANNING                     = 0x08
+	SET_SPEED_1                 = 0x09
+	VOL_SLIDE                   = 0x0A
+	POS_JUMP                    = 0x0B
+	RETRIG                      = 0x0C
+	PATTERN_BREAK               = 0x0D
+	SET_SPEED_2                 = 0x0F
+	LFO_CONTROL                 = 0x10
+	FEEDBACK_CONTROL            = 0x11
+	FM_TL_OP1_CONTROL           = 0x12
+	FM_TL_OP2_CONTROL           = 0x13
+	FM_TL_OP3_CONTROL           = 0x14
+	FM_TL_OP4_CONTROL           = 0x15
+	FM_MULT_CONTROL             = 0x16
+	FM_DAC_ENABLE               = 0x17
+	FM_ECT_CH2_ENABLE           = 0x18
+	FM_GLOBAL_AR_CONTROL        = 0x19
+	FM_AR_OP1_CONTROL           = 0x1A
+	FM_AR_OP2_CONTROL           = 0x1B
+	FM_AR_OP3_CONTROL           = 0x1C
+	FM_AR_OP4_CONTROL           = 0x1D
+	SSG_SET_CHANNEL_MODE        = 0x20
+	SSG_SET_NOISE_TONE          = 0x21
+	ARPEGGIO_TICK_SPEED         = 0xE0
+	NOTE_SLIDE_UP               = 0xE1
+	NOTE_SLIDE_DOWN             = 0xE2
+	SET_VIBRATO_MODE            = 0xE3
+	SET_FINE_VIBRATO_DEPTH      = 0xE4
+	SET_FINE_TUNE               = 0xE5
+	SET_LEGATO_MODE             = 0xEA
+	SET_SAMPLES_BANK            = 0xEB
+	NOTE_CUT                    = 0xEC
+	NOTE_DELAY                  = 0xED
+	SYNC_SIGNAL                 = 0xEE
+	SET_GLOBAL_FINE_TUNE        = 0xEF
 
 @dataclass
 class Effect:
-	effect_code: EffectCode
-	effect_value: int
+	code: EffectCode
+	value: Optional[int]
+
+	def __init__(self, code: EffectCode, value: int):
+		self.code = code
+		if value == 0xFFFF: self.value = None
+		else:               self.value = value 
 
 @dataclass
 class PatternRow:
-	note: Note
-	octave: int
-	volume: int       # -1 means empty
+	note: Optional[Note]
+	octave: Optional[int]
+	volume: Optional[int]      
 	effects: [Effect]
-	instrument: int   # -1 means empty
+	instrument: Optional[int] 
+
+	def __init__(self, data: bytes, effect_count: int):
+		self.note = Note(data[0] | (data[1] << 8))
+		self.octave = data[2] | (data[3] << 8)
+		self.volume = data[4] | (data[5] << 8)
+		head_ofs = 6
+
+		self.effects = []
+		for i in range(effect_count):
+			code = EffectCode(data[head_ofs] | (data[head_ofs+1] << 8))
+			value = data[head_ofs+2] | (data[head_ofs+3] << 8)
+			self.effects.append(Effect(code, value))
+			head_ofs += 4
+			
+		self.instrument = data[head_ofs] | (data[head_ofs+1] << 8)
+
+		if self.note == Note.EMPTY and self.octave == 0:
+			self.note = None
+			self.octave = None
+		if self.volume == 0xFFFF: self.volume = None
+		if self.instrument == 0xFFFF: self.instrument = None
+
 
 @dataclass
 class Pattern:
 	rows: [PatternRow]
 
+	def __init__(self, data: bytes, rows_per_pattern: int, effect_count: int):
+		head_ofs = 0
+		self.rows = []
+
+		for i in range(rows_per_pattern):
+			self.rows.append(PatternRow(data[head_ofs:], effect_count))
+			head_ofs += BASE_ROW_SIZE + EFFECT_SIZE*effect_count
 
 ######################## SAMPLE ########################
 
@@ -252,6 +336,7 @@ class Module:
 		self.parse_pattern_matrix()
 		self.parse_instruments()
 		self.parse_wavetables()
+		self.parse_patterns()
 
 	def check_file(self):
 		format_string = self.data[0:16].decode(encoding='ascii')
@@ -293,7 +378,6 @@ class Module:
 		self.head_ofs += 13
 
 	def parse_pattern_matrix(self):
-		SYSTEM_TOTAL_CHANNELS = 13
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
 			rows = []
 			for row in range(self.rows_in_pattern_matrix):
@@ -324,3 +408,17 @@ class Module:
 		if wavetable_count != 0:
 			raise RuntimeError("Wavetables aren't supported")
 		self.head_ofs += 1
+
+	def parse_patterns(self):
+		self.patterns = []
+
+		for i in range(SYSTEM_TOTAL_CHANNELS):
+			channel_patterns = []
+			effect_count = self.data[self.head_ofs]
+			self.head_ofs += 1
+
+			for j in range(self.rows_in_pattern_matrix):
+				pattern = Pattern(self.data[self.head_ofs:], self.rows_per_pattern, effect_count)
+				channel_patterns.append(pattern)
+				self.head_ofs += self.rows_per_pattern * (BASE_ROW_SIZE + EFFECT_SIZE*effect_count)
+			self.patterns.append(channel_patterns)
