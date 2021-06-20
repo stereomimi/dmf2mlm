@@ -1,5 +1,6 @@
 import dmf
 import sys
+from utils import *
 
 def print_std_macro(macro: dmf.STDMacro):
 	print("\t\t[ ", end='', flush=True)
@@ -80,7 +81,7 @@ def print_debug_info(module: dmf.Module):
 	for i in range(len(module.samples)):
 		sample = module.samples[i]
 		print(f"{i}: {sample.name}")
-		print("\tsize:", sample.sample_size)
+		print("\tlenght:", len(sample.data))
 		print("\tpitch:", sample.pitch)
 		print("\tamp:", sample.amplitude)
 		print("\tbits:", sample.bits.name)
@@ -134,3 +135,14 @@ print_debug_info(module)
 #pat_id  = int(sys.argv[3])
 #print_pattern(module.patterns[channel][pat_id])
 
+sample = module.samples[0] 
+sample_raw = bytearray()
+
+for s in sample.data:
+	#print(s)
+	us = signed2unsigned_16(s)
+	sample_raw.append(us & 0xFF)
+	sample_raw.append(us >> 8)
+
+with open("sample.raw", "wb") as f:
+	f.write(sample_raw)

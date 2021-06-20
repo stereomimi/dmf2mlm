@@ -3,6 +3,7 @@
 from enum import Enum, IntEnum
 from dataclasses import dataclass
 from typing import Optional
+from utils import *
 import zlib
 
 ######################## CONSTANTS ########################
@@ -261,34 +262,80 @@ class SampleWidth(IntEnum):
 	WORD = 16
 
 class Sample:
-	sample_size: int
 	name: str
 	#rate: int # Should always be 18.5Khz for ADPCMA samples; ignored
 	pitch: int
 	amplitude: int
 	bits: SampleWidth
 	data: [int]
-	dmf_size: int # Size in the DMF samples data, including name, rate, pitch, etc...
+	dmf_size: Optional[int] # Size in the DMF samples data, including name, rate, pitch, etc...
+	
+	def from_dmf_data(data: bytes):
+		"""
+		Creates Sample from DMF module sample data
+		
+		Parameters
+		----------
+		data
+			DMF sample data, should start exactly where the sample data starts
+		"""
+		s = Sample()
 
-	def __init__(self, data: bytes):
 		head_ofs = 0
-		self.sample_size = int.from_bytes(data[head_ofs:head_ofs+3], byteorder='little', signed=False)
+		sample_size = int.from_bytes(data[head_ofs:head_ofs+3], byteorder='little', signed=False)
 		name_len = data[head_ofs+4]
-		self.name = data[head_ofs+5:head_ofs+5+name_len].decode(encoding='ascii')
+		s.name = data[head_ofs+5:head_ofs+5+name_len].decode(encoding='ascii')
 		head_ofs += 6+name_len # ignore sample rate
 
-		self.pitch = data[head_ofs] - 5
-		self.amplitude = (data[head_ofs+1] - 50) * 2
-		self.bits = SampleWidth(data[head_ofs+2])
+		s.pitch = data[head_ofs] - 5
+		s.amplitude = (data[head_ofs+1] - 50) * 2
+		s.bits = SampleWidth(data[head_ofs+2])
 		head_ofs += 3
 
-		self.data = []
-		for _ in range(self.sample_size):
+		s.data = []
+		for _ in range(sample_size):
 			value = data[head_ofs] | (data[head_ofs+1] << 8)
-			self.data.append(value)
+			value = unsigned2signed_16(value)
+			s.data.append(value)
 			head_ofs += 2
 
-		self.dmf_size = head_ofs
+		s.dmf_size = head_ofs
+		return s
+
+	def apply_pitch(self):
+		"""
+		Returns sample with pitch modification applied
+		and pitch attribute reset.
+		
+		Returns
+		-------
+		Sample
+			The original sample, but pitched differently
+		"""
+
+		new_sample = Sample()
+		new_sample.name = self.name
+		new_sample.amplitude = self.amplitude
+		new_sample.bits = self.bits
+		new_sample.dmf_size = self.dmf_size
+		new_sample.data = []
+		new_sample.pitch = 0
+
+		sample_count = len(self.data)
+
+		if self.pitch > 0:
+			for i in range(0, sample_count, self.pitch+1):
+				new_sample.data.append(self.data[i])
+		elif self.pitch < 0:
+			for i in range(sample_count):
+				for _ in range(self.pitch*-1 + 1):
+					new_sample.data.append(self.data[i])
+		else:
+			new_sample.data = self.data
+
+		return new_sample
+
+
 
 ######################## MODULE ########################
 
@@ -450,6 +497,7 @@ class Module:
 		self.head_ofs += 1
 
 		for _ in range(sample_count):
-			sample = Sample(self.data[self.head_ofs:])
+			sample = Sample.from_dmf_data(self.data[self.head_ofs:])
+			sample = sample.apply_pitch()
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
