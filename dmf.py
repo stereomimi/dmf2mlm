@@ -336,6 +336,35 @@ class Sample:
 		return new_sample
 
 
+	def apply_amplitude(self):
+		"""
+		Returns sample with amplitude modification 
+		applied and amplitude attribute reset.
+		
+		Returns
+		-------
+		Sample
+			The original sample, but pitched differently
+		"""
+
+		new_sample = Sample()
+		new_sample.name = self.name
+		new_sample.pitch = self.pitch
+		new_sample.bits = self.bits
+		new_sample.dmf_size = self.dmf_size
+		new_sample.data = []
+		new_sample.amplitude = 0
+
+		multiplier = (self.amplitude + 100.0) / 100.0
+		print(multiplier)
+
+		for s in self.data:
+			new_s = clamp(s * multiplier, -32768, 32767)
+			new_sample.data.append(int(new_s))
+
+		return new_sample
+
+
 
 ######################## MODULE ########################
 
@@ -498,6 +527,6 @@ class Module:
 
 		for _ in range(sample_count):
 			sample = Sample.from_dmf_data(self.data[self.head_ofs:])
-			sample = sample.apply_pitch()
+			sample = sample.apply_pitch().apply_amplitude()
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
