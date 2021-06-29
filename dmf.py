@@ -98,7 +98,6 @@ class STDMacro:
 
 		self.envelope_values = []
 		for i in range(envelope_size):
-			print("\t",i)
 			value = data[head_ofs]
 			value |= data[head_ofs+1] << 8
 			value |= data[head_ofs+2] << 16
@@ -203,7 +202,6 @@ class EffectCode(IntEnum):
 	SYNC_SIGNAL                 = 0xEE
 	SET_GLOBAL_FINE_TUNE        = 0xEF
 
-@dataclass
 class Effect:
 	code: EffectCode
 	value: Optional[int]
@@ -213,7 +211,6 @@ class Effect:
 		if value == 0xFFFF: self.value = None
 		else:               self.value = value 
 
-@dataclass
 class PatternRow:
 	note: Optional[Note]
 	octave: Optional[int]
@@ -242,8 +239,6 @@ class PatternRow:
 		if self.volume == 0xFFFF: self.volume = None
 		if self.instrument == 0xFFFF: self.instrument = None
 
-
-@dataclass
 class Pattern:
 	rows: [PatternRow]
 
@@ -255,6 +250,16 @@ class Pattern:
 			self.rows.append(PatternRow(data[head_ofs:], effect_count))
 			head_ofs += BASE_ROW_SIZE + EFFECT_SIZE*effect_count
 
+class PatternMatrix:
+	rows_per_pattern: int
+	rows_in_pattern_matrix: int
+	matrix: [[int]] # pattern_matrix[channel][row]
+
+	def __init__(self):
+		self.rows_per_pattern = 0
+		self.rows_in_pattern_matrix = 0
+		self.matrix = []
+		
 ######################## SAMPLE ########################
 
 class SampleWidth(IntEnum):
@@ -356,7 +361,6 @@ class Sample:
 		new_sample.amplitude = 0
 
 		multiplier = (self.amplitude + 100.0) / 100.0
-		print(multiplier)
 
 		for s in self.data:
 			new_s = clamp(s * multiplier, -32768, 32767)
@@ -388,7 +392,7 @@ class FramesMode(Enum):
 # This is not a 1:1 match, some redundant things are simplified
 class Module:
 	data: bytes   # uncompressed data
-	head_ofs = 18 # used to calculate addresses in the DMF data
+	head_ofs: int # used to calculate addresses in the DMF data
 
 	# Format flags
 	version: int
@@ -405,9 +409,8 @@ class Module:
 	tick_time_1: int
 	tick_time_2: int
 	hz_value: int
-	rows_per_pattern: int
-	rows_in_pattern_matrix: int
-	pattern_matrix: [[int]]  = [] # pattern_matrix[channel][row]
+
+	pattern_matrix: PatternMatrix
 
 	# Instruments data
 	instruments: [Instrument] = []
@@ -422,6 +425,8 @@ class Module:
 	samples: [Sample]
 
 	def __init__(self, compressed_data: bytes):
+		self.pattern_matrix = PatternMatrix()
+
 		self.data = zlib.decompress(compressed_data)
 		if not self.check_file():
 			raise RuntimeError("Corrupted DMF file")
@@ -444,6 +449,7 @@ class Module:
 		self.system = System(self.data[17])
 		if self.system != System.NEOGEO:
 			raise RuntimeError("Unsupported system (must be NeoGeo)")
+		self.head_ofs = 18
 
 	def parse_visual_info(self):
 		name_len = self.data[self.head_ofs]
@@ -467,20 +473,20 @@ class Module:
 			if frames_mode == FramesMode.PAL: self.hz_value = 50
 			else: self.hz_value = 60
 
-		self.rows_per_pattern = self.data[self.head_ofs+8]
-		self.rows_per_pattern |= self.data[self.head_ofs+9] << 8
-		self.rows_per_pattern |= self.data[self.head_ofs+10] << 16
-		self.rows_per_pattern |= self.data[self.head_ofs+11] << 24
-		self.rows_in_pattern_matrix = self.data[self.head_ofs+12]
+		self.pattern_matrix.rows_per_pattern = self.data[self.head_ofs+8]
+		self.pattern_matrix.rows_per_pattern |= self.data[self.head_ofs+9] << 8
+		self.pattern_matrix.rows_per_pattern |= self.data[self.head_ofs+10] << 16
+		self.pattern_matrix.rows_per_pattern |= self.data[self.head_ofs+11] << 24
+		self.pattern_matrix.rows_in_pattern_matrix = self.data[self.head_ofs+12]
 		self.head_ofs += 13
 
 	def parse_pattern_matrix(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
 			rows = []
-			for row in range(self.rows_in_pattern_matrix):
+			for row in range(self.pattern_matrix.rows_in_pattern_matrix):
 				rows.append(self.data[self.head_ofs])
 				self.head_ofs += 1
-			self.pattern_matrix.append(rows)
+			self.pattern_matrix.matrix.append(rows)
 
 	def parse_instruments(self):
 		FM_INSTRUMENT_SIZE = 52
@@ -514,10 +520,10 @@ class Module:
 			effect_count = self.data[self.head_ofs]
 			self.head_ofs += 1
 
-			for j in range(self.rows_in_pattern_matrix):
-				pattern = Pattern(self.data[self.head_ofs:], self.rows_per_pattern, effect_count)
+			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
+				pattern = Pattern(self.data[self.head_ofs:], self.pattern_matrix.rows_per_pattern, effect_count)
 				channel_patterns.append(pattern)
-				self.head_ofs += self.rows_per_pattern * (BASE_ROW_SIZE + EFFECT_SIZE*effect_count)
+				self.head_ofs += self.pattern_matrix.rows_per_pattern * (BASE_ROW_SIZE + EFFECT_SIZE*effect_count)
 			self.patterns.append(channel_patterns)
 
 	def parse_samples(self):

@@ -1,5 +1,6 @@
 import dmf
 import mzs
+import multi_dmf
 import sys
 from utils import *
 
@@ -125,25 +126,12 @@ def print_pattern(pattern: dmf.Pattern):
 				print("{0:02X}".format(effect.value), end=" ", flush=True)
 		print("")
 
-module: dmf.Module
+dmf_modules = []
 
-with open(sys.argv[1], "rb") as file:
-	module = dmf.Module(file.read())
+for i in range(1, len(sys.argv)):
+	with open(sys.argv[i], "rb") as file:
+		print(f"Parsing '{sys.argv[i]}'...", end='', flush=True)
+		dmf_modules.append(dmf.Module(file.read()))
+		print(" OK")
 
-print_debug_info(module)
-
-#channel = int(sys.argv[2])
-#pat_id  = int(sys.argv[3])
-#print_pattern(module.patterns[channel][pat_id])
-
-sample = module.samples[0] 
-sample_raw = bytearray()
-
-for s in sample.data:
-	#print(s)
-	us = signed2unsigned_16(s)
-	sample_raw.append(us & 0xFF)
-	sample_raw.append(us >> 8)
-
-with open("sample.raw", "wb") as f:
-	f.write(sample_raw)
+dmf_multi_module = multi_dmf.MultiModule(dmf_modules)
