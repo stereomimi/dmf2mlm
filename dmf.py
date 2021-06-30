@@ -14,6 +14,20 @@ FM_OP_SIZE = 12
 BASE_ROW_SIZE = 8 # Without effects
 EFFECT_SIZE = 4
 
+FM_CH1 = 0
+FM_CH2 = 1
+FM_CH3 = 2
+FM_CH4 = 3
+SSG_CH1 = 4
+SSG_CH2 = 5
+SSG_CH3 = 6
+PA_CH1 = 7
+PA_CH2 = 8
+PA_CH3 = 9
+PA_CH4 = 10
+PA_CH5 = 11
+PA_CH6 = 12
+
 ######################## INSTRUMENT ########################
 
 class InstrumentType(Enum):
@@ -259,7 +273,7 @@ class PatternMatrix:
 		self.rows_per_pattern = 0
 		self.rows_in_pattern_matrix = 0
 		self.matrix = []
-		
+
 ######################## SAMPLE ########################
 
 class SampleWidth(IntEnum):
@@ -389,6 +403,12 @@ class FramesMode(Enum):
 	PAL = 0
 	NTSC = 1
 
+class TimeInfo():
+	time_base: int
+	tick_time_1: int
+	tick_time_2: int
+	hz_value: int
+
 # This is not a 1:1 match, some redundant things are simplified
 class Module:
 	data: bytes   # uncompressed data
@@ -405,15 +425,12 @@ class Module:
 	song_author: str
 
 	# Module information
-	time_base: int
-	tick_time_1: int
-	tick_time_2: int
-	hz_value: int
+	time_info: TimeInfo
 
 	pattern_matrix: PatternMatrix
 
 	# Instruments data
-	instruments: [Instrument] = []
+	instruments: [Instrument]
 
 	# Wavetable data (UNUSED)
 	# wavetables: []
@@ -425,8 +442,6 @@ class Module:
 	samples: [Sample]
 
 	def __init__(self, compressed_data: bytes):
-		self.pattern_matrix = PatternMatrix()
-
 		self.data = zlib.decompress(compressed_data)
 		if not self.check_file():
 			raise RuntimeError("Corrupted DMF file")
@@ -439,6 +454,8 @@ class Module:
 		self.parse_wavetables()
 		self.parse_patterns()
 		self.parse_samples()
+
+		self.optimize_patterns()
 
 	def check_file(self):
 		format_string = self.data[0:16].decode(encoding='ascii')
@@ -461,18 +478,20 @@ class Module:
 		self.head_ofs += 1 + author_len + 2 # Ignore highlight information
 
 	def parse_module_info(self):
-		self.time_base = self.data[self.head_ofs]
-		self.tick_time_1 = self.data[self.head_ofs+1]
-		self.tick_time_2 = self.data[self.head_ofs+2]
+		self.time_info = TimeInfo()
+		self.time_info.time_base = self.data[self.head_ofs]
+		self.time_info.tick_time_1 = self.data[self.head_ofs+1]
+		self.time_info.tick_time_2 = self.data[self.head_ofs+2]
 		
 		frames_mode = FramesMode(self.data[self.head_ofs+3])
 		using_custom_hz = bool(self.data[self.head_ofs+4])
 		if using_custom_hz:
-			self.hz_value = int(str(self.data[self.head_ofs+5]), 16)
+			self.time_info.hz_value = int(str(self.data[self.head_ofs+5]), 16)
 		else:
-			if frames_mode == FramesMode.PAL: self.hz_value = 50
-			else: self.hz_value = 60
+			if frames_mode == FramesMode.PAL: self.time_info.hz_value = 50
+			else: self.time_info.hz_value = 60
 
+		self.pattern_matrix = PatternMatrix()
 		self.pattern_matrix.rows_per_pattern = self.data[self.head_ofs+8]
 		self.pattern_matrix.rows_per_pattern |= self.data[self.head_ofs+9] << 8
 		self.pattern_matrix.rows_per_pattern |= self.data[self.head_ofs+10] << 16
@@ -490,6 +509,7 @@ class Module:
 
 	def parse_instruments(self):
 		FM_INSTRUMENT_SIZE = 52
+		self.instruments = []
 		instrument_count = self.data[self.head_ofs]
 		self.head_ofs += 1
 
@@ -536,3 +556,16 @@ class Module:
 			sample = sample.apply_pitch().apply_amplitude()
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
+
+	def optimize_patterns(self):
+		for ch in range(SYSTEM_TOTAL_CHANNELS):
+			unique_patterns = set(self.pattern_matrix.matrix[ch])
+			unused_patterns = []
+
+			for pat in range(len(self.patterns[ch])):
+				if not pat in unique_patterns:
+					unused_patterns.append(pat)
+
+			unused_patterns.sort(reverse=True)
+			for pat in unused_patterns:
+				del self.patterns[ch][pat]

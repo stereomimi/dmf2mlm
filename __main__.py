@@ -12,37 +12,9 @@ def print_std_macro(macro: dmf.STDMacro):
 	if macro.loop_enabled: print("\t\tloop:", macro.loop_position)
 	else:                  print("\t\tloop: no")
 
-def print_debug_info(module: dmf.Module):
-	print("========= Format flags & System =========")
-	print("version:", module.version)
-	print("system:", module.system)
-	print("")
-
-	print("========== Visual information ==========")
-	print("name:", module.song_name)
-	print("author:", module.song_author)
-	print("")
-
-	print("========== Module information ==========")
-	print("time base:", module.time_base)
-	print("tick time 1:", module.tick_time_1)
-	print("tick time 2:", module.tick_time_2)
-	print("hz value:", module.hz_value)
-	print("rows per pattern:", module.rows_per_pattern)
-	print("rows in pattern matrix:", module.rows_in_pattern_matrix)
-	print("")
-
-	print("=========== Pattern matrix ===========")
-	for ch in range(13):
-		print("[ ", end='', flush=True)
-		for row in range(module.rows_in_pattern_matrix):
-			print("${0:02x}, ".format(module.pattern_matrix[ch][row]), end="", flush=True)
-		print("]")
-	print("")
-
-	print("=========== Instruments ===========")
-	for i in range(len(module.instruments)):
-		instrument = module.instruments[i]
+def print_instruments(instruments: [dmf.Instrument]):
+	for i in range(len(instruments)):
+		instrument = instruments[i]
 
 		if isinstance(instrument, dmf.FMInstrument):
 			print("${0:02x}: {1} [FM]".format(i, instrument.name))
@@ -77,6 +49,37 @@ def print_debug_info(module: dmf.Module):
 			print_std_macro(instrument.noise_macro)
 			print("\tChannel Mode Macro")
 			print_std_macro(instrument.chmode_macro)
+
+def print_debug_info(module: dmf.Module):
+	print("========= Format flags & System =========")
+	print("version:", module.version)
+	print("system:", module.system)
+	print("")
+
+	print("========== Visual information ==========")
+	print("name:", module.song_name)
+	print("author:", module.song_author)
+	print("")
+
+	print("========== Module information ==========")
+	print("time base:", module.time_base)
+	print("tick time 1:", module.tick_time_1)
+	print("tick time 2:", module.tick_time_2)
+	print("hz value:", module.hz_value)
+	print("rows per pattern:", module.rows_per_pattern)
+	print("rows in pattern matrix:", module.rows_in_pattern_matrix)
+	print("")
+
+	print("=========== Pattern matrix ===========")
+	for ch in range(13):
+		print("[ ", end='', flush=True)
+		for row in range(module.rows_in_pattern_matrix):
+			print("${0:02x}, ".format(module.pattern_matrix[ch][row]), end="", flush=True)
+		print("]")
+	print("")
+
+	print("=========== Instruments ===========")
+	print_instruments(module.instruments)
 	print("")
 
 	print("=========== Samples ===========")
@@ -135,3 +138,5 @@ for i in range(1, len(sys.argv)):
 		print(" OK")
 
 dmf_multi_module = multi_dmf.MultiModule(dmf_modules)
+
+#print_instruments(dmf_multi_module.instruments)
