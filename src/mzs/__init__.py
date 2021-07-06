@@ -14,4 +14,4 @@ class SoundData:
 		self.songs = []
 
 	def add_song_from_dmf(module: dmf.Module):
-		pass
+		self.songs.append(Song.from_dmf(module))

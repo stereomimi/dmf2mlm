@@ -1,10 +1,15 @@
 from .instrument import *
 from .other_data import *
 from .event import *
+from .. import dmf
 
+class EventList:
+	events: [SongEvent]
+	is_sub: bool
+	
 class Song:
-	channels: [[SongEvent]]
-	sub_event_lists: [[SongEvent]]
+	channels: [EventList]
+	sub_event_lists: [EventList]
 	instruments: [Instrument]
 	other_data: [OtherData]
 	tma_counter: int
@@ -15,6 +20,10 @@ class Song:
 		self.instruments = []
 		self.other_data = []
 		self.tma_counter = 0
-
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			self.channels.append([])
+
+	def from_dmf(module: dmf.Module):
+		self = Song()
+
+		return self
