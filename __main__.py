@@ -1,8 +1,5 @@
-import dmf
-import mzs
-import multi_dmf
+from src import dmf,mzs
 import sys
-from utils import *
 
 def print_std_macro(macro: dmf.STDMacro):
 	print("\t\t[ ", end='', flush=True)
@@ -137,6 +134,4 @@ for i in range(1, len(sys.argv)):
 		dmf_modules.append(dmf.Module(file.read()))
 		print(" OK")
 
-dmf_multi_module = multi_dmf.MultiModule(dmf_modules)
-
-#print_instruments(dmf_multi_module.instruments)
+mlm_song_data = mzs.SoundData()
