@@ -89,7 +89,6 @@ class FMOperator:
 		return is_equal
 
 class FMInstrument(Instrument):
-
 	algorithm: int
 	feedback: int
 	fms: int

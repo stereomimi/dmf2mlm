@@ -25,5 +25,10 @@ class Song:
 
 	def from_dmf(module: dmf.Module):
 		self = Song()
-
+		self._instruments_from_dmf(module)
 		return self
+
+	def _instruments_from_dmf(self, module: dmf.Module):
+		for dinst in module.instruments:
+			if isinstance(dinst, dmf.FMInstrument):
+				self.instruments.append(FMInstrument.from_dmf_inst(dinst))
