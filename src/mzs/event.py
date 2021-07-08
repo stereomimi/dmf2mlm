@@ -1,9 +1,10 @@
 from .defs import *
+from dataclasses import dataclass
 
 ######################## EVENT & NOTES ########################
 
 class SongEvent:
-	timing: int
+	timing: int = 0
 
 class SongNote(SongEvent):
 	note: int # Can also be a sample id in ADPCM channels
@@ -11,6 +12,7 @@ class SongNote(SongEvent):
 
 ######################## COMMANDS ########################
 
+@dataclass
 class SongCommand(SongEvent):
 	pass
 
@@ -64,13 +66,14 @@ class SongComSetPanning(SongCommand):
 	"""
 	panning: Panning
 
+@dataclass
 class SongComJumpToSubEL(SongCommand):
 	"""
 	Song Command Jump to Sub Event List
 	------------------------------
 	Jumps to sub event list. Doesn't allow nesting.
 	"""
-	sub_el_idx: int
+	sub_el_idx: int # index to Song.sub_event_lists
 
 class SongComPositionJump(SongCommand):
 	"""

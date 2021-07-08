@@ -9,7 +9,7 @@ class EventList:
 	
 class Song:
 	channels: [EventList]
-	sub_event_lists: [EventList]
+	sub_event_lists: [[EventList]] # sub_event_lists[channel][sub_el]
 	instruments: [Instrument]
 	other_data: [OtherData]
 	tma_counter: int
@@ -22,10 +22,12 @@ class Song:
 		self.tma_counter = 0
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			self.channels.append([])
+			self.sub_event_lists.append([])
 
 	def from_dmf(module: dmf.Module):
 		self = Song()
 		self._instruments_from_dmf(module)
+		self._ch_event_lists_from_dmf_pat_matrix(module.pattern_matrix)
 		return self
 
 	def _instruments_from_dmf(self, module: dmf.Module):
@@ -48,5 +50,12 @@ class Song:
 			else: # Is SSG Instrument
 				mzs_inst, new_odata = SSGInstrument.from_dmf_inst(dinst, len(self.other_data))
 				self.other_data.extend(new_odata)
-
 			self.instruments.append(mzs_inst)
+
+	def _ch_event_lists_from_dmf_pat_matrix(self, pat_mat: dmf.PatternMatrix):
+		for ch in range(len(pat_mat.matrix)):
+			unique_patterns = list(set(pat_mat.matrix[ch]))
+			for row in range(pat_mat.rows_in_pattern_matrix):
+				pattern = pat_mat.matrix[ch][row]
+				sub_el_idx = unique_patterns.index(pattern)
+				self.sub_event_lists[ch].append(SongComJumpToSubEL(sub_el_idx))
