@@ -1,4 +1,4 @@
-from .. import dmf
+from .. import dmf, utils
 
 class OtherDataIndex(int):
 	pass
@@ -25,15 +25,15 @@ class SSGMacro(OtherData):
 		else:
 			self.loop_point = dmacro.loop_position
 
-		if el_size == "nibble":
+		if el_size == "byte" or macro_val_count == 1:
+			self.data = bytearray(map(utils.signed2unsigned_8, dmacro.envelope_values))
+
+		elif el_size == "nibble":
 			self.data = bytearray()
 			for i in range(0, macro_val_count, 2):
 				byte = dmacro.envelope_values[i]
 				byte |= dmacro.envelope_values[i+1] << 4
 				self.data.append(byte)
-
-		elif el_size == "byte":
-			self.data = bytearray(dmacro.envelope_values)
 
 		else:
 			raise RuntimeError("Invalid MZS SSG Macro element size")

@@ -77,7 +77,8 @@ class FMInstrument(Instrument):
 	operators: [FMOperator] = [] # should have 4 operators
 
 	def __init__(self, data: bytes):
-		self.operators = []
+		OP_INDEX = [0, 2, 1, 3] # Due to questionable optimization choices the operators need to be reordered.
+		self.operators = [[], [], [], []]
 
 		head_ofs = 0
 		name_len = data[head_ofs]
@@ -91,7 +92,7 @@ class FMInstrument(Instrument):
 		head_ofs += 4
 
 		for i in range(FM_OP_COUNT):
-			self.operators.append(FMOperator(data[head_ofs:]))
+			self.operators[OP_INDEX[i]] = FMOperator(data[head_ofs:])
 			head_ofs += FM_OP_SIZE
 		self.size = head_ofs
 

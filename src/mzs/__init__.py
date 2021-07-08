@@ -13,5 +13,9 @@ class SoundData:
 	def __init__(self):
 		self.songs = []
 
-	def add_song_from_dmf(module: dmf.Module):
-		self.songs.append(Song.from_dmf(module))
+	def from_dmf(modules: [dmf.Module]):
+		self = SoundData()
+		for mod in modules:
+			self.songs.append(Song.from_dmf(mod))
+		return self
+		
