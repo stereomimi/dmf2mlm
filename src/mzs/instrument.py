@@ -9,6 +9,13 @@ class Instrument:
 class ADPCMAInstrument(Instrument):
 	sample_list: OtherDataIndex
 
+	def __init__(self, sample_list=None):
+		if sample_list != None:
+			self.sample_list = sample_list
+
+	def print(self):
+		print("sample_list:", self.sample_list)
+
 class FMOperator:
 	dtmul: int
 	tl: int

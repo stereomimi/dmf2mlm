@@ -29,8 +29,17 @@ class Song:
 		return self
 
 	def _instruments_from_dmf(self, module: dmf.Module):
+		"""
+		DMF Instruments are offset by 1, since Instrument 0
+		is used for ADPCM-A samples. This function also
+		assumes self.other_data is empty
+		"""
+
 		if len(module.instruments) > 255:
 			raise RuntimeError("Maximum supported instrument count is 255")
+		
+		self.instruments.append(ADPCMAInstrument(0))
+		self.other_data.append(SampleList())
 
 		for dinst in module.instruments:
 			mzs_inst = None
@@ -42,3 +51,11 @@ class Song:
 
 			self.instruments.append(mzs_inst)
 
+		for i in range(len(self.instruments)):
+			print("======== Instrument 0x{0:02X} ========".format(i))
+			self.instruments[i].print()
+		print("")
+
+		for i in range(len(self.other_data)):
+			print("======== Other Data {0} ========".format(i))
+			self.other_data[i].print()
