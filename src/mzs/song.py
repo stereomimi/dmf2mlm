@@ -29,6 +29,14 @@ class Song:
 		return self
 
 	def _instruments_from_dmf(self, module: dmf.Module):
+		if len(module.instruments > 255):
+			raise RuntimeError("Maximum supported instrument count is 255")
+
 		for dinst in module.instruments:
+			mzs_inst = None
 			if isinstance(dinst, dmf.FMInstrument):
-				self.instruments.append(FMInstrument.from_dmf_inst(dinst))
+				mzs_inst = FMInstrument.from_dmf_inst(dinst)
+			else: # Is SSG Instrument
+				mzs_inst, new_odata = SSGInstrument.from_dmf_inst(dinst, len(self.other_data))
+				self.other_data.extend(new_odata)
+

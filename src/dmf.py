@@ -68,26 +68,6 @@ class FMOperator:
 		self.ssg_enabled = bool(data[11] & 8)
 		self.ssg_mode = data[11] & 7
 
-	def __eq__(self, other) -> bool:
-		if not isinstance(other, FMOperator):
-			return False
-
-		is_equal = self.am == other.am
-		is_equal &= self.ar == other.ar
-		is_equal &= self.dr == other.dr
-		is_equal &= self.mult == other.mult
-		is_equal &= self.rr == other.rr
-		is_equal &= self.sl == other.sl
-		is_equal &= self.tl == other.tl
-		is_equal &= self.dt2 == other.dt2
-		is_equal &= self.rs == other.rs
-		is_equal &= self.dt == other.dt
-		is_equal &= self.d2r == other.d2r
-		is_equal &= self.ssg_enabled == other.ssg_enabled
-		is_equal &= self.ssg_mode == other.ssg_mode
-
-		return is_equal
-
 class FMInstrument(Instrument):
 	algorithm: int
 	feedback: int
@@ -115,20 +95,6 @@ class FMInstrument(Instrument):
 			head_ofs += FM_OP_SIZE
 		self.size = head_ofs
 
-	def __eq__(self, other) -> bool:
-		if not isinstance(other, FMInstrument):
-			return False
-
-		is_equal = self.algorithm == other.algorithm
-		is_equal &= self.feedback == other.feedback
-		is_equal &= self.fms == other.fms
-		is_equal &= self.ams == other.ams
-
-		for i in range(FM_OP_COUNT):
-			is_equal &= self.operators[i] == other.operators[i]
-
-		return is_equal
-
 class STDMacro:
 	envelope_values: [int]
 	loop_position: int
@@ -154,17 +120,6 @@ class STDMacro:
 		self.loop_position = data[head_ofs]
 		self.loop_enabled = self.loop_position >= 0 and self.loop_position < envelope_size
 		self.size = head_ofs+1
-
-	def __eq__(self, other) -> bool:
-		if not isinstance(other, STDMacro):
-			return False
-
-		is_equal = self.envelope_values == other.envelope_values
-		is_equal &= self.loop_position == other.loop_position
-		is_equal &= self.loop_enabled == other.loop_enabled
-		is_equal &= self.size == other.size
-
-		return is_equal
 
 class STDArpeggioMode(Enum):
 	NORMAL = 0
@@ -194,18 +149,6 @@ class STDInstrument(Instrument):
 		head_ofs += self.chmode_macro.size
 
 		self.size = head_ofs
-
-	def __eq__(self, other) -> bool:
-		if not isinstance(other, STDInstrument):
-			return False
-
-		is_equal = self.volume_macro == other.volume_macro
-		is_equal &= self.arpeggio_macro == other.arpeggio_macro
-		is_equal &= self.arpeggio_mode == other.arpeggio_mode
-		#is_equal &= self.noise_macro == other.noise_macro # Noise macros will for now be ignored
-		is_equal &= self.chmode_macro == other.chmode_macro
-
-		return is_equal
 
 ######################## PATTERN ########################
 
