@@ -32,7 +32,6 @@ class Song:
 		if len(module.instruments) > 255:
 			raise RuntimeError("Maximum supported instrument count is 255")
 
-		i = 0
 		for dinst in module.instruments:
 			mzs_inst = None
 			if isinstance(dinst, dmf.FMInstrument):
@@ -42,7 +41,4 @@ class Song:
 				self.other_data.extend(new_odata)
 
 			self.instruments.append(mzs_inst)
-			print("======== Instrument 0x{0:02X} ========".format(i))
-			i += 1
-			mzs_inst.print()
 

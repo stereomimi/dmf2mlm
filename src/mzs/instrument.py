@@ -1,5 +1,6 @@
 from .other_data import *
 from enum import Enum, IntEnum
+from typing import Optional
 from .. import dmf, utils
 
 class Instrument:
@@ -79,9 +80,14 @@ class SSGInstrument(Instrument):
 	#volenv_period_fine_tune: int
 	#volenv_period_coarse_tune: int
 	#volenv_shape: int
-	mix_macro: OtherDataIndex
-	vol_macro: OtherDataIndex
-	arp_macro: OtherDataIndex
+	mix_macro: Optional[OtherDataIndex]
+	vol_macro: Optional[OtherDataIndex]
+	arp_macro: Optional[OtherDataIndex]
+
+	def __init__(self):
+		self.mix_macro = None
+		self.vol_macro = None
+		self.arp_macro = None
 
 	def from_dmf_inst(dinst: dmf.STDInstrument, odata_count: int):
 		self = SSGInstrument()
@@ -114,4 +120,7 @@ class SSGInstrument(Instrument):
 		return base_mix
 
 	def print(self):
-		pass
+		print("mix:", self.mixing)
+		print("mix macro:", self.mix_macro)
+		print("vol macro:", self.vol_macro)
+		print("arp macro:", self.arp_macro)
