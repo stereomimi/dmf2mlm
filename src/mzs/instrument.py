@@ -13,9 +13,6 @@ class ADPCMAInstrument(Instrument):
 		if sample_list != None:
 			self.sample_list = sample_list
 
-	def print(self):
-		print("sample_list:", self.sample_list)
-
 class FMOperator:
 	dtmul: int
 	tl: int
@@ -36,15 +33,6 @@ class FMOperator:
 		self.eg = dmfop.ssg_mode | (int(dmfop.ssg_enabled)<<3)
 		return self
 
-	def print(self):
-		print("\tdtmul: 0x{0:02X}".format(self.dtmul))
-		print("\ttl:    0x{0:02X}".format(self.tl))
-		print("\tksar:  0x{0:02X}".format(self.ksar))
-		print("\tamdr:  0x{0:02X}".format(self.amdr))
-		print("\tsr:    0x{0:02X}".format(self.sr))
-		print("\tslrr:  0x{0:02X}".format(self.slrr))
-		print("\teg:    0x{0:02X}".format(self.eg))
-
 class FMInstrument(Instrument):
 	fbalgo: int
 	amspms: int
@@ -63,17 +51,6 @@ class FMInstrument(Instrument):
 		for dop in dinst.operators:
 			self.operators.append(FMOperator.from_dmf_op(dop))
 		return self
-
-	def print(self):
-		print("fbalgo: 0x{0:02X}".format(self.fbalgo))
-		print("amspms: 0x{0:02X}".format(self.amspms))
-		print("op_enable:", self.op_enable)
-		print("operators:")
-
-		for i in range(len(self.operators)):
-			print(f"Operator {i+1}:")
-			self.operators[i].print()
-
 
 class SSGMixing(IntEnum):
 	NONE  = 0
@@ -125,9 +102,3 @@ class SSGInstrument(Instrument):
 			return SSGMixing.TONE
 		base_mix = SSGMixing(dinst.chmode_macro.envelope_values[0]+1)
 		return base_mix
-
-	def print(self):
-		print("mix:", self.mixing)
-		print("mix macro:", self.mix_macro)
-		print("vol macro:", self.vol_macro)
-		print("arp macro:", self.arp_macro)

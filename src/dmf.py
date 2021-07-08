@@ -454,8 +454,6 @@ class Module:
 		self.parse_patterns()
 		self.parse_samples()
 
-		self.optimize_patterns()
-
 	def check_file(self):
 		format_string = self.data[0:16].decode(encoding='ascii')
 		return format_string == ".DelekDefleMask."
@@ -555,16 +553,3 @@ class Module:
 			sample = sample.apply_pitch().apply_amplitude()
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
-
-	def optimize_patterns(self):
-		for ch in range(SYSTEM_TOTAL_CHANNELS):
-			unique_patterns = set(self.pattern_matrix.matrix[ch])
-			unused_patterns = []
-
-			for pat in range(len(self.patterns[ch])):
-				if not pat in unique_patterns:
-					unused_patterns.append(pat)
-
-			unused_patterns.sort(reverse=True)
-			for pat in unused_patterns:
-				del self.patterns[ch][pat]

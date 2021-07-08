@@ -50,12 +50,3 @@ class Song:
 				self.other_data.extend(new_odata)
 
 			self.instruments.append(mzs_inst)
-
-		for i in range(len(self.instruments)):
-			print("======== Instrument 0x{0:02X} ========".format(i))
-			self.instruments[i].print()
-		print("")
-
-		for i in range(len(self.other_data)):
-			print("======== Other Data {0} ========".format(i))
-			self.other_data[i].print()

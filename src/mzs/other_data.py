@@ -14,10 +14,6 @@ class SampleList(OtherData):
 		self.start_addresses = []
 		self.end_addresses = []
 
-	def print(self):
-		print("start_addresses:", self.start_addresses)
-		print("end_addresses:", self.end_addresses)
-
 class SSGMacro(OtherData):
 	data: bytearray
 	loop_position: int
@@ -45,7 +41,3 @@ class SSGMacro(OtherData):
 			raise RuntimeError("Invalid MZS SSG Macro element size")
 
 		return self
-
-	def print(self):
-		print("data:", list(self.data))
-		print("loop_position:", self.loop_position)
