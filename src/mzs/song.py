@@ -55,6 +55,8 @@ class Song:
 	def _ch_event_lists_from_dmf_pat_matrix(self, pat_mat: dmf.PatternMatrix):
 		for ch in range(len(pat_mat.matrix)):
 			unique_patterns = list(set(pat_mat.matrix[ch]))
+			unique_patterns.sort()
+			
 			for row in range(pat_mat.rows_in_pattern_matrix):
 				pattern = pat_mat.matrix[ch][row]
 				sub_el_idx = unique_patterns.index(pattern)

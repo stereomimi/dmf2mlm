@@ -21,4 +21,4 @@ ADPCM-A samples
 - Each pattern is converted into a sub event list, and the pattern matrix is converted into a series of "Jump to sub event list" commands.
 
 - If the used patterns in a pattern matrix channel are $00, $01, $10, and $03
-then they will be respectively converted into the channel's sub-EL 0, 1, 2, and 3. first the unique used patterns are found (`list(set(pat_matrix))`), then the sub-EL id is found from said unique pattern list (`unique_pattern.find(pattern)`)
+then they will be respectively converted into the channel's sub-EL 0, 1, 3, and 2. first the unique used patterns are found (`list(set(pat_matrix))`), then they're sorted (`unique_pats.sort()`); the sub-EL id is found from said unique pattern list (`unique_pats.find(pattern)`)
