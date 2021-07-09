@@ -24,3 +24,5 @@ def signed2unsigned_3(n: int):
 	else:     return n
 
 def clamp(n, s, l): return max(s, min(n, l))
+
+def list_top(l: list): return l[len(l)-1]

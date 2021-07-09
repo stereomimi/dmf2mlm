@@ -3,8 +3,9 @@
 from enum import Enum, IntEnum
 from dataclasses import dataclass
 from typing import Optional
-from .utils import *
 import zlib
+from .utils import *
+from .defs import *
 
 ######################## CONSTANTS ########################
 
@@ -251,6 +252,18 @@ class PatternRow:
 			self.octave = None
 		if self.volume == 0xFFFF: self.volume = None
 		if self.instrument == 0xFFFF: self.instrument = None
+
+	def is_empty(self):
+		is_empty = (self.note == None) & (self.octave == None)
+		is_empty &= (self.volume == None) & (self.instrument == None)
+
+		for effect in self.effects:
+			if effect.code != EffectCode.EMPTY:
+				is_empty = False
+			else:
+				is_empty &= effect.value == None
+
+		return is_empty
 
 class Pattern:
 	rows: [PatternRow]
@@ -553,3 +566,8 @@ class Module:
 			sample = sample.apply_pitch().apply_amplitude()
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
+
+def get_channel_kind(channel: int):
+	if channel <= FM_CH4:    return ChannelKind.FM
+	elif channel <= SSG_CH3: return ChannelKind.SSG
+	return ChannelKind.ADPCMA

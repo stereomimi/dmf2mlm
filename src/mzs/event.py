@@ -1,4 +1,4 @@
-from .defs import *
+from ..defs import *
 from dataclasses import dataclass
 
 ######################## EVENT & NOTES ########################
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class SongEvent:
 	timing: int = 0
 
+@dataclass
 class SongNote(SongEvent):
 	note: int # Can also be a sample id in ADPCM channels
 
@@ -24,6 +25,7 @@ class SongComEOEL(SongCommand):
 	"""
 	pass
 
+@dataclass
 class SongComNoteOff(SongCommand):
 	"""
 	Song Command Note Off
@@ -32,6 +34,7 @@ class SongComNoteOff(SongCommand):
 	"""
 	pass
 
+@dataclass
 class SongComChangeInstrument(SongCommand):
 	"""
 	Song Command Change Instrument
@@ -40,6 +43,7 @@ class SongComChangeInstrument(SongCommand):
 	"""
 	instrument: int
 
+@dataclass
 class SongComWaitTicks(SongCommand):
 	"""
 	Song Command Wait Ticks
@@ -122,6 +126,7 @@ class SongComSetTimerAFreq(SongCommand):
 	"""
 	frequency: int
 
+@dataclass
 class SongComReturnFromSubEL(SongCommand):
 	"""
 	Song Command Return from Sub Event List
