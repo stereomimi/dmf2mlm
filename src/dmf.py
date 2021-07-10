@@ -78,7 +78,7 @@ class FMInstrument(Instrument):
 	operators: [FMOperator] = [] # should have 4 operators
 
 	def __init__(self, data: bytes):
-		OP_INDEX = [0, 2, 1, 3] # Due to questionable optimization choices the operators need to be reordered.
+		OP_INDEX = [0, 2, 1, 3] # Due to questionable choices the operators need to be reordered.
 		self.operators = [[], [], [], []]
 
 		head_ofs = 0
@@ -106,9 +106,10 @@ class STDMacro:
 	def __init__(self, data: bytes, value_ofs: int = 0):
 		head_ofs = 0
 		envelope_size = data[head_ofs]
+		head_ofs += 1
+
 		if envelope_size > 127:
 			raise RuntimeError(f"Corrupted envelope size (valid range is 0-127; envelope size is {envelope_size}")
-		head_ofs += 1
 
 		self.envelope_values = []
 		for i in range(envelope_size):
@@ -119,9 +120,16 @@ class STDMacro:
 			self.envelope_values.append(value+value_ofs)
 			head_ofs += 4
 
-		self.loop_position = data[head_ofs]
-		self.loop_enabled = self.loop_position >= 0 and self.loop_position < envelope_size
-		self.size = head_ofs+1
+		if envelope_size > 0:
+			self.loop_position = data[head_ofs]
+			self.loop_enabled = self.loop_position >= 0
+			head_ofs += 1
+		else:
+			self.loop_enabled = False
+			self.loop_position = None
+
+		self.size = head_ofs
+		
 
 class STDArpeggioMode(Enum):
 	NORMAL = 0
@@ -225,6 +233,9 @@ class Effect:
 		if value == 0xFFFF: self.value = None
 		else:               self.value = value 
 
+	def __eq__(self, other):
+		return self.code == other.code and self.value == other.value
+
 class PatternRow:
 	note: Optional[Note]
 	octave: Optional[int]
@@ -275,6 +286,9 @@ class Pattern:
 		for i in range(rows_per_pattern):
 			self.rows.append(PatternRow(data[head_ofs:], effect_count))
 			head_ofs += BASE_ROW_SIZE + EFFECT_SIZE*effect_count
+
+	def __eq__(self, other):
+		return self.rows == other.rows
 
 class PatternMatrix:
 	rows_per_pattern: int
