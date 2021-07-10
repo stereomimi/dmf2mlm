@@ -3,6 +3,7 @@
 from enum import Enum, IntEnum
 from dataclasses import dataclass
 from typing import Optional
+from itertools import groupby
 import zlib
 from .utils import *
 from .defs import *
@@ -129,7 +130,7 @@ class STDMacro:
 			self.loop_position = None
 
 		self.size = head_ofs
-		
+
 
 class STDArpeggioMode(Enum):
 	NORMAL = 0
@@ -276,6 +277,26 @@ class PatternRow:
 
 		return is_empty
 
+	def get_hashable_data(self):
+		data = []
+
+		if self.note == None:
+			data.append(None)
+		else:
+			data.append(int(self.note))
+
+		data.append(self.octave)
+		data.append(self.volume)
+		data.append(self.instrument)
+
+		for effect in self.effects:
+			if effect.code == None:
+				data.append(None)
+			else:
+				data.append(int(effect.code))
+			data.append(effect.value)
+		return tuple(data)
+
 class Pattern:
 	rows: [PatternRow]
 
@@ -287,8 +308,25 @@ class Pattern:
 			self.rows.append(PatternRow(data[head_ofs:], effect_count))
 			head_ofs += BASE_ROW_SIZE + EFFECT_SIZE*effect_count
 
+	def __hash__(self):
+		row_data = []
+		for row in self.rows:
+			row_data.append(row.get_hashable_data())
+		return hash(tuple(row_data))
+
 	def __eq__(self, other):
-		return self.rows == other.rows
+		self_hash = hash(self)
+		other_hash = hash(other)
+
+		#print(self_hash, "\t", other_hash, "\tself == other\t", self_hash == other_hash)
+		return self_hash == other_hash
+
+	def __lt__(self, other):
+		self_hash = hash(self)
+		other_hash = hash(other)
+
+		#print(self_hash, "\t", other_hash, "\tself < other\t", self_hash < other_hash)
+		return self_hash < other_hash
 
 class PatternMatrix:
 	rows_per_pattern: int
@@ -409,7 +447,6 @@ class Sample:
 		return new_sample
 
 
-
 ######################## MODULE ########################
 
 class System(Enum):
@@ -480,6 +517,10 @@ class Module:
 		self.parse_wavetables()
 		self.parse_patterns()
 		self.parse_samples()
+
+	def optimize(self):
+		#for ch in range(SYSTEM_TOTAL_CHANNELS):
+		self.optimize_equal_patterns(SYSTEM_TOTAL_CHANNELS-1)
 
 	def check_file(self):
 		format_string = self.data[0:16].decode(encoding='ascii')
@@ -580,6 +621,19 @@ class Module:
 			sample = sample.apply_pitch().apply_amplitude()
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
+
+	def optimize_equal_patterns(self, ch: int):
+		print("")
+
+		patterns_with_ids = [] # [(pattern, id); ...]
+		for i in range(len(self.patterns[ch])):
+			patterns_with_ids.append((self.patterns[ch][i], i))
+		patterns_with_ids.sort(key=lambda tup: tup[0])
+
+		for _, eq_pats in groupby(patterns_with_ids, key=lambda tup: tup[0]):
+			pass
+
+
 
 def get_channel_kind(channel: int):
 	if channel <= FM_CH4:    return ChannelKind.FM

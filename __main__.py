@@ -8,6 +8,10 @@ for i in range(1, len(sys.argv)):
 		print(f"Parsing '{sys.argv[i]}'...", end='', flush=True)
 		mod = dmf.Module(file.read())
 		print(" OK")
+
+		print(f"Optimizing '{sys.argv[i]}'...", end='', flush=True)
+		mod.optimize()
+		print(" OK")
 		dmf_modules.append(mod)
 
 mlm_song_data = mzs.SoundData.from_dmf(dmf_modules)
