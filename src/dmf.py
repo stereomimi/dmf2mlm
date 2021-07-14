@@ -544,7 +544,7 @@ class Module:
 
 	def parse_module_info(self):
 		self.time_info = TimeInfo()
-		self.time_info.time_base = self.data[self.head_ofs]
+		self.time_info.time_base = self.data[self.head_ofs]+1
 		self.time_info.tick_time_1 = self.data[self.head_ofs+1]
 		self.time_info.tick_time_2 = self.data[self.head_ofs+2]
 		
@@ -554,7 +554,7 @@ class Module:
 			self.time_info.hz_value = int(str(self.data[self.head_ofs+5]), 16)
 		else:
 			if frames_mode == FramesMode.PAL: self.time_info.hz_value = 50
-			else: self.time_info.hz_value = 60
+			else:                             self.time_info.hz_value = 60
 
 		self.pattern_matrix = PatternMatrix()
 		self.pattern_matrix.rows_per_pattern = self.data[self.head_ofs+8]

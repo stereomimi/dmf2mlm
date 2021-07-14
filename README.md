@@ -7,7 +7,7 @@ Program that converts deflemask project files to a neogeo M1ROM running the Mezz
 
 3. Convert the merged modules into a mlm.SoundData instance (mzs/\*.py)
 
-4. Compile said instance into an m1rom (????)
+4. Compile said instance into an m1rom (mzs/\*.py)
 
 ## Limitations
 

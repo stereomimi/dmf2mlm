@@ -14,4 +14,13 @@ for i in range(1, len(sys.argv)):
 		print(" OK")
 		dmf_modules.append(mod)
 
-mlm_song_data = mzs.SoundData.from_dmf(dmf_modules)
+print(f"Converting...", end='', flush=True)
+mlm_sdata = mzs.SoundData.from_dmf(dmf_modules)
+print(" OK")
+
+print(f"Compiling...", end='', flush=True)
+mlm_compiled_sdata = mlm_sdata.compile()
+print(" OK")
+
+with open("m1_sdata.bin", "wb") as file:
+	file.write(mlm_compiled_sdata)

@@ -36,6 +36,8 @@ class Song:
 
 	def from_dmf(module: dmf.Module):
 		self = Song()
+		hz_value = module.time_info.hz_value * module.time_info.time_base
+		self.tma_counter = Song.calculate_tma_cnt(hz_value)
 		self._instruments_from_dmf(module)
 
 		total_count = 0
@@ -46,8 +48,13 @@ class Song:
 
 			for subel in self.sub_event_lists[ch]:
 				total_count += len(subel.events)
-		print(total_count)
 		return self
+
+	def calculate_tma_cnt(frequency: int):
+		cnt = 1024.0 - (1.0 / frequency / 72.0 * 4000000.0)
+		if cnt < 0 or cnt > 0x3FF:
+			raise RuntimeError("Invalid timer a counter value")
+		return round(cnt)
 
 	def _instruments_from_dmf(self, module: dmf.Module):
 		"""
