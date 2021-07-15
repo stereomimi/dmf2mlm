@@ -134,9 +134,6 @@ class Song:
 		for i in range(len(pattern.rows)):
 			row = pattern.rows[i]
 
-			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1
-			else:          ticks_since_last_com += time_info.tick_time_2
-			
 			if not row.is_empty():
 				last_com = utils.list_top(sub_el.events)
 				last_com.timing = ticks_since_last_com
@@ -149,7 +146,7 @@ class Song:
 				if row.volume != None and row.volume != current_volume:
 					current_volume = row.volume
 					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
-					sub_el.events.append(SongComChangeInstrument(current_instrument))
+					sub_el.events.append(SongComChangeVolume(current_instrument))
 				
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
@@ -159,10 +156,13 @@ class Song:
 					mlm_note = Song.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
 					sub_el.events.append(SongNote(mlm_note))
 
-		if i % 2 == 0: 
-			utils.list_top(sub_el.events).timing = time_info.tick_time_1 + ticks_since_last_com
-		else:          
-			utils.list_top(sub_el.events).timing = time_info.tick_time_2 + ticks_since_last_com
+			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1
+			else:          ticks_since_last_com += time_info.tick_time_2
+
+		#if i % 2 == 0: 
+		#	utils.list_top(sub_el.events).timing = time_info.tick_time_1 + ticks_since_last_com
+		#else:          
+		#	utils.list_top(sub_el.events).timing = time_info.tick_time_2 + ticks_since_last_com
 		
 		sub_el.events.append(SongComReturnFromSubEL())
 		return sub_el
