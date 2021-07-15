@@ -1,15 +1,52 @@
 from ..defs import *
 from dataclasses import dataclass
+from typing import Optional
 
 ######################## EVENT & NOTES ########################
 
 class SongEvent:
 	timing: int = 0
 
+	def compile(self, ch: int, ticks: Optional[int] = None) -> bytearray:
+		comp_data = bytearray()
+		if ticks == None:
+			t = self.timing
+		else:
+			t = ticks
+
+		while (t > 0):
+			if t > 0x100:
+				comp_data.append(0x04)            # Wait word command
+				comp_data.append(t & 0xFF)        # ticks LSB
+				comp_data.append((t >> 8) & 0xFF) # ticks MSB
+				t -= 0xFFFF
+			elif t > 0x10:
+				comp_data.append(0x03)         # Wait byte command
+				comp_data.append((t-1) & 0xFF) # ticks 
+				t -= 0x100
+			elif t > 0:
+				comp_data.append(0x10 | ((t-1) & 0x0F)) # Wait nibble command
+				t -= 0x10
+
+		return comp_data
+
 @dataclass
 class SongNote(SongEvent):
 	note: int # Can also be a sample id in ADPCM channels
 
+	def compile(self, ch: int) -> bytearray:
+		comp_data = bytearray(2)
+		t = self.timing
+
+		comp_data[0] = 0x80 | (t & 0x7F)
+		comp_data[1] = self.note
+		t -= 0x7F
+
+		if t > 0:
+			comp_waitcom_data = super(SongNote, self).compile(ch, t)
+			comp_data.extend(comp_waitcom_data)
+
+		return comp_data
 
 ######################## COMMANDS ########################
 
@@ -43,6 +80,18 @@ class SongComChangeInstrument(SongCommand):
 	"""
 	instrument: int
 
+	def compile(self, ch: int) -> bytearray:
+		comp_data = bytearray(2)
+
+		comp_data[0] = 0x02            # Change instrument command
+		comp_data[1] = self.instrument
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
+		return comp_data
+
 @dataclass
 class SongComWaitTicks(SongCommand):
 	"""
@@ -52,7 +101,6 @@ class SongComWaitTicks(SongCommand):
 	it will occupy 1, 2 or 3 bytes depending 
 	on how much ticks need to be waited
 	"""
-	pass
 
 class SongComSetChannelVol(SongCommand):
 	"""
@@ -133,4 +181,13 @@ class SongComReturnFromSubEL(SongCommand):
 	------------------------------
 	Returns from Sub event list
 	"""
-	pass
+	
+	def compile(self, ch: int) -> bytearray:
+		comp_data = bytearray()
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
+		comp_data.append(0x20) # Return from SubEL command
+		return comp_data

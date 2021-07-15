@@ -1,7 +1,7 @@
-from .song import *
 from enum import Enum, IntEnum
 from .. import dmf
 from ..defs import *
+from .song import *
 
 class SoundData:
 	"""
@@ -31,5 +31,6 @@ class SoundData:
 			comp_song, song_ofs = self.songs[i].compile(head_ofs)
 			comp_sdata[1 + i*2]     = song_ofs & 0xFF
 			comp_sdata[1 + i*2 + 1] = song_ofs >> 8
+			head_ofs += len(comp_song)
 
 		return comp_sdata

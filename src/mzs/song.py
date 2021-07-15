@@ -13,6 +13,22 @@ class EventList:
 		if kind == "sub":
 			self.is_sub = True
 
+	def get_sym_name(self, ch: int, idx: int = 0):
+		if self.is_sub:
+			return "SUBEL:CH{0:01X};{1:02X}".format(ch, idx)
+		else:
+			return "EL:{0:02X}".format(ch)
+
+	def compile(self, ch: int) -> bytearray:
+		comp_data = bytearray()
+		print("========")
+		for event in self.events:
+			comp_event = event.compile(ch)
+			comp_data.extend(comp_event)
+			print(type(event).__name__.ljust(32), list(comp_event))
+
+		return comp_data
+
 class Song:
 	channels: [EventList]
 	sub_event_lists: [[EventList]] # sub_event_lists[channel][sub_el]
@@ -118,10 +134,10 @@ class Song:
 		for i in range(len(pattern.rows)):
 			row = pattern.rows[i]
 
-			if row.is_empty():
-				if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1
-				else:          ticks_since_last_com += time_info.tick_time_2
-			else:
+			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1
+			else:          ticks_since_last_com += time_info.tick_time_2
+			
+			if not row.is_empty():
 				last_com = utils.list_top(sub_el.events)
 				last_com.timing = ticks_since_last_com
 				ticks_since_last_com = 0
@@ -181,16 +197,26 @@ class Song:
 		symbols = {} # symbol_name: address
 
 		comp_odata, odata_sym = self.compile_other_data(head_ofs)
+		comp_data.extend(comp_odata)
 		symbols |= odata_sym
 		head_ofs += len(comp_odata)
 
 		symbols["INSTRUMENTS"] = head_ofs
 		comp_inst_data = self.compile_instruments(symbols)
+		comp_data.extend(comp_inst_data)
+		head_ofs += len(comp_inst_data)
 
-		print(symbols)
+		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
+			comp_subel_data, subel_syms = self.compile_sub_els(i, head_ofs)
+			comp_data.extend(comp_subel_data)
+			symbols |= subel_syms
+			head_ofs += len(comp_subel_data)
 
 		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
 			raise RuntimeError("Compiled sound data overflow")
+
+		#for s in symbols: print(s, "\t0x{0:04X}".format(symbols[s]))
+
 		return comp_data, 0
 
 	def compile_other_data(self, head_ofs: int) -> (bytearray, dict):
@@ -216,3 +242,20 @@ class Song:
 			comp_data.extend(inst.compile(symbols))
 
 		return comp_data
+
+	def compile_sub_els(self, ch: int, head_ofs: int) -> (bytearray, dict):
+		"""
+		Returns compiled other data and a new symbol table
+		"""
+		comp_data = bytearray()
+		symbols = {}
+
+		for i in range(len(self.sub_event_lists[ch])):
+			subel = self.sub_event_lists[ch][i]
+			symbols[subel.get_sym_name(ch, i)] = head_ofs
+
+			comp_subel = subel.compile(ch)
+			comp_data.extend(comp_subel)
+			head_ofs += len(comp_subel)
+
+		return (comp_data, symbols)
