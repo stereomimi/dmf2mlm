@@ -1,6 +1,7 @@
 from enum import Enum, IntEnum
 
-M1ROM_SDATA_MAX_SIZE = 30 * 1024
+M1ROM_SDATA_MAX_SIZE = 0xB7FF
+MLM_INSTRUMENT_SIZE = 32
 
 class Panning(IntEnum):
 	NONE   = 0x00

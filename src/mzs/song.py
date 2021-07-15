@@ -184,6 +184,13 @@ class Song:
 		symbols |= odata_sym
 		head_ofs += len(comp_odata)
 
+		symbols["INSTRUMENTS"] = head_ofs
+		comp_inst_data = self.compile_instruments(symbols)
+
+		print(symbols)
+
+		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
+			raise RuntimeError("Compiled sound data overflow")
 		return comp_data, 0
 
 	def compile_other_data(self, head_ofs: int) -> (bytearray, dict):
@@ -194,11 +201,18 @@ class Song:
 		comp_data = bytearray()
 
 		for i in range(len(self.other_data)):
-			sym_name = "ODATA:{0:08X}".format(i)
-			symbols[sym_name] = head_ofs
+			symbols[OtherDataIndex(i).get_sym_name()] = head_ofs
 
 			comp_odata = self.other_data[i].compile()
 			comp_data.extend(comp_odata)
 			head_ofs += len(comp_odata)
 
 		return comp_data, symbols
+
+	def compile_instruments(self, symbols: dict) -> bytearray:
+		comp_data = bytearray()
+
+		for inst in self.instruments:
+			comp_data.extend(inst.compile(symbols))
+
+		return comp_data

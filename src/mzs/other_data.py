@@ -1,7 +1,8 @@
 from .. import dmf, utils
 
 class OtherDataIndex(int):
-	pass
+	def get_sym_name(self):
+		return "ODATA:{0:08X}".format(self)
 
 class OtherData:
 	pass
@@ -14,15 +15,20 @@ class SampleList(OtherData):
 		self.addresses = [] # [(start_addr, end_addr), ...]
 
 	def compile(self) -> bytearray:
-		if len(self.addresses) > 256:
-			raise RuntimeError("SampleList has too many samples")
-			
-		comp_data = bytearray(len(self.addresses * 4))
-		for i in range(len(self.addresses)):
-			comp_data[i*4]     = self.addresses[i][0] & 0xFF # Start LSB
-			comp_data[i*4 + 1] = self.addresses[i][0] >> 8   # Start MSB
-			comp_data[i*4 + 2] = self.addresses[i][1] & 0xFF # End LSB
-			comp_data[i*4 + 3] = self.addresses[i][1] >> 8   # End MSB
+		smp_count = len(self.addresses)
+		comp_data: bytearray
+
+		if smp_count > 0:
+			comp_data = bytearray(smp_count * 4)
+			comp_data[0] = smp_count-1
+			for i in range(smp_count):
+				comp_data[i*4 + 1] = self.addresses[i][0] & 0xFF # Start LSB
+				comp_data[i*4 + 2] = self.addresses[i][0] >> 8   # Start MSB
+				comp_data[i*4 + 3] = self.addresses[i][1] & 0xFF # End LSB
+				comp_data[i*4 + 4] = self.addresses[i][1] >> 8   # End MSB
+		else: 
+			comp_data = bytearray(5) # zero-filled
+
 		return comp_data
 
 class SSGMacro(OtherData):

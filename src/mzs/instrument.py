@@ -2,6 +2,7 @@ from .other_data import *
 from enum import Enum, IntEnum
 from typing import Optional
 from .. import dmf, utils
+from ..defs import *
 
 class Instrument:
 	pass
@@ -11,7 +12,15 @@ class ADPCMAInstrument(Instrument):
 
 	def __init__(self, sample_list=None):
 		if sample_list != None:
-			self.sample_list = sample_list
+			self.sample_list = OtherDataIndex(sample_list)
+
+	def compile(self, symbols: dict) -> bytearray:
+		comp_data = bytearray(MLM_INSTRUMENT_SIZE)
+		smp_list_addr = symbols[self.sample_list.get_sym_name()]
+
+		comp_data[0] = smp_list_addr & 0xFF
+		comp_data[1] = smp_list_addr >> 8
+		return comp_data
 
 class FMOperator:
 	dtmul: int
@@ -33,6 +42,20 @@ class FMOperator:
 		self.eg = dmfop.ssg_mode | (int(dmfop.ssg_enabled)<<3)
 		return self
 
+	def compile(self) -> bytearray:
+		FM_OPERATOR_SIZE = 7
+		comp_data = bytearray(FM_OPERATOR_SIZE)
+
+		comp_data[0] = self.dtmul 
+		comp_data[1] = self.tl 
+		comp_data[2] = self.ksar 
+		comp_data[3] = self.amdr 
+		comp_data[4] = self.sr 
+		comp_data[5] = self.slrr 
+		comp_data[6] = self.eg 
+
+		return comp_data
+
 class FMInstrument(Instrument):
 	fbalgo: int
 	amspms: int
@@ -51,6 +74,19 @@ class FMInstrument(Instrument):
 		for dop in dinst.operators:
 			self.operators.append(FMOperator.from_dmf_op(dop))
 		return self
+
+	def compile(self, symbols: dict) -> bytearray:
+		comp_data = bytearray(3) # FBALGO, AMSPMS, OP ENABLE
+		comp_data[0] = self.fbalgo
+		comp_data[1] = self.amspms
+
+		for i in range(len(self.op_enable)):
+			comp_data[2] |= self.op_enable[i] << (i+4)
+		for op in self.operators:
+			comp_data.extend(op.compile())
+
+		comp_data.append(0) # Padding
+		return comp_data
 
 class SSGMixing(IntEnum):
 	NONE  = 0
@@ -83,15 +119,15 @@ class SSGInstrument(Instrument):
 		new_odata = []
 		if mix_odata != None:
 			new_odata.append(mix_odata)
-			self.mix_macro = odata_count
+			self.mix_macro = OtherDataIndex(odata_count)
 			odata_count += 1
 		if vol_odata != None:
 			new_odata.append(vol_odata)
-			self.vol_macro = odata_count
+			self.vol_macro = OtherDataIndex(odata_count)
 			odata_count += 1
 		if arp_odata != None:
 			new_odata.append(arp_odata)
-			self.arp_macro = odata_count
+			self.arp_macro = OtherDataIndex(odata_count)
 			odata_count += 1
 
 		return (self, new_odata)
@@ -102,3 +138,20 @@ class SSGInstrument(Instrument):
 			return SSGMixing.TONE
 		base_mix = SSGMixing(dinst.chmode_macro.envelope_values[0]+1)
 		return base_mix
+
+	def compile(self, symbols: dict) -> bytearray:
+		comp_data = bytearray(MLM_INSTRUMENT_SIZE)
+		comp_data[0] = int(self.mixing)
+		comp_data[1] = 0 # EG Enable
+
+		macros = [self.mix_macro, self.vol_macro, self.arp_macro]
+		for i in range(len(macros)):
+			if macros[i] == None:
+				comp_data[5 + i*2]     = 0x00 # Macro ptr LSB (NULL)
+				comp_data[5 + i*2 + 1] = 0x00 # Macro ptr MSB (NULL)
+			else:
+				macro_ptr = symbols[macros[i].get_sym_name()]
+				comp_data[5 + i*2]     = macro_ptr & 0xFF # Macro ptr LSB 
+				comp_data[5 + i*2 + 1] = macro_ptr >> 8   # Macro ptr MSB
+		
+		return comp_data
