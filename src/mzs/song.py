@@ -170,3 +170,35 @@ class Song:
 			return octave*12 + note
 		else:
 			raise RuntimeError("Unsupported channel kind")
+
+	def compile(self, head_ofs: int) -> (bytearray, int):
+		"""
+		Returns the compiled address and the song offset
+		in a tuple, in that order.
+		"""
+		print("")
+		comp_data = bytearray()
+		symbols = {} # symbol_name: address
+
+		comp_odata, odata_sym = self.compile_other_data(head_ofs)
+		symbols |= odata_sym
+		head_ofs += len(comp_odata)
+
+		return comp_data, 0
+
+	def compile_other_data(self, head_ofs: int) -> (bytearray, dict):
+		"""
+		Returns compiled other data and a symbol table
+		"""
+		symbols = {}
+		comp_data = bytearray()
+
+		for i in range(len(self.other_data)):
+			sym_name = "ODATA:{0:08X}".format(i)
+			symbols[sym_name] = head_ofs
+
+			comp_odata = self.other_data[i].compile()
+			comp_data.extend(comp_odata)
+			head_ofs += len(comp_odata)
+
+		return comp_data, symbols

@@ -1,8 +1,7 @@
 from .song import *
 from enum import Enum, IntEnum
 from .. import dmf
-
-M1ROM_SDATA_MAX_SIZE = 30 * 1024
+from ..defs import *
 
 class SoundData:
 	"""
@@ -24,11 +23,13 @@ class SoundData:
 	def compile(self) -> bytearray:
 		comp_sdata = bytearray(M1ROM_SDATA_MAX_SIZE)
 		head_ofs = 0
-		symbols = {} # symbol_name: address
 
-		for _ in range(len(self.songs)):
-			comp_sdata[head_ofs]   = 0x00
-			comp_sdata[head_ofs+1] = 0x00
-			head_ofs += 2
-			
+		comp_sdata[head_ofs] = len(self.songs)
+		head_ofs += 1 + (len(self.songs) * 2) # Leave space for MLM header
+
+		for i in range(len(self.songs)):
+			comp_song, song_ofs = self.songs[i].compile(head_ofs)
+			comp_sdata[1 + i*2]     = song_ofs & 0xFF
+			comp_sdata[1 + i*2 + 1] = song_ofs >> 8
+
 		return comp_sdata
