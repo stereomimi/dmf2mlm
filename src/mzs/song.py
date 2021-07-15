@@ -146,7 +146,7 @@ class Song:
 				if row.volume != None and row.volume != current_volume:
 					current_volume = row.volume
 					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
-					sub_el.events.append(SongComChangeVolume(current_instrument))
+					sub_el.events.append(SongComSetChannelVol(current_instrument))
 				
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
