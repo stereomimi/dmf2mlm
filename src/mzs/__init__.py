@@ -32,5 +32,5 @@ class SoundData:
 			comp_sdata[1 + i*2]     = song_ofs & 0xFF
 			comp_sdata[1 + i*2 + 1] = song_ofs >> 8
 			head_ofs += len(comp_song)
-
+		
 		return comp_sdata

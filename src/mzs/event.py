@@ -7,12 +7,13 @@ from typing import Optional
 class SongEvent:
 	timing: int = 0
 
-	def compile(self, ch: int, ticks: Optional[int] = None) -> bytearray:
+	def compile(self, ch: int, ticks) -> bytearray:
 		comp_data = bytearray()
-		if ticks == None:
-			t = self.timing
-		else:
+		if isinstance(ticks, int):
 			t = ticks
+		else:
+			t = self.timing
+			
 
 		while (t > 0):
 			if t > 0x100:
@@ -34,7 +35,7 @@ class SongEvent:
 class SongNote(SongEvent):
 	note: int # Can also be a sample id in ADPCM channels
 
-	def compile(self, ch: int) -> bytearray:
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray(2)
 		t = self.timing
 
@@ -69,7 +70,20 @@ class SongComNoteOff(SongCommand):
 	------------------------------
 	Stops the channel's playing note/sample
 	"""
-	pass
+	
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = bytearray(2)
+		t = self.timing
+
+		comp_data[0] = 0x01     # Note off command
+		comp_data[1] = t & 0xFF
+		t -= 0xFF
+
+		if t > 0:
+			comp_waitcom_data = super(SongNote, self).compile(ch, t)
+			comp_data.extend(comp_waitcom_data)
+
+		return comp_data
 
 @dataclass
 class SongComChangeInstrument(SongCommand):
@@ -80,7 +94,7 @@ class SongComChangeInstrument(SongCommand):
 	"""
 	instrument: int
 
-	def compile(self, ch: int) -> bytearray:
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray(2)
 
 		comp_data[0] = 0x02            # Change instrument command
@@ -111,6 +125,18 @@ class SongComSetChannelVol(SongCommand):
 	"""
 	volume: int
 
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = bytearray(2)
+
+		comp_data[0] = 0x05        # Set channel volume command
+		comp_data[1] = self.volume 
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
+		return comp_data
+
 class SongComSetPanning(SongCommand):
 	"""
 	Song Command Set Panning
@@ -127,6 +153,16 @@ class SongComJumpToSubEL(SongCommand):
 	Jumps to sub event list. Doesn't allow nesting.
 	"""
 	sub_el_idx: int # index to Song.sub_event_lists
+
+	def compile(self, ch: int, symbols: dict) -> bytearray:
+		comp_data = bytearray()
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
+		comp_data.append(0x20) # Return from SubEL command
+		return comp_data
 
 class SongComPositionJump(SongCommand):
 	"""
@@ -183,7 +219,7 @@ class SongComReturnFromSubEL(SongCommand):
 	Returns from Sub event list
 	"""
 	
-	def compile(self, ch: int) -> bytearray:
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray()
 
 		if self.timing > 0:

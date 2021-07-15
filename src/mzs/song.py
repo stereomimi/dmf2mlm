@@ -12,6 +12,8 @@ class EventList:
 		self.events = []
 		if kind == "sub":
 			self.is_sub = True
+		else:
+			self.is_sub = False
 
 	def get_sym_name(self, ch: int, idx: int = 0):
 		if self.is_sub:
@@ -19,13 +21,12 @@ class EventList:
 		else:
 			return "EL:{0:02X}".format(ch)
 
-	def compile(self, ch: int) -> bytearray:
+	def compile(self, ch: int, symbols: dict) -> bytearray:
 		comp_data = bytearray()
-		print("========")
 		for event in self.events:
-			comp_event = event.compile(ch)
+			comp_event = event.compile(ch, symbols)
 			comp_data.extend(comp_event)
-			print(type(event).__name__.ljust(32), list(comp_event))
+			#print(type(event).__name__.ljust(32), list(comp_event))
 
 		return comp_data
 
@@ -212,12 +213,19 @@ class Song:
 			symbols |= subel_syms
 			head_ofs += len(comp_subel_data)
 
+			symbols[self.channels[i].get_sym_name(i)] = head_ofs
+			comp_el_data = self.channels[i].compile(i, symbols)
+			head_ofs += len(comp_el_data)
+		
+		symbols["HEADER"] = head_ofs
+		comp_header_data = self.compile_header(symbols)
+
 		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
 			raise RuntimeError("Compiled sound data overflow")
-
-		#for s in symbols: print(s, "\t0x{0:04X}".format(symbols[s]))
-
-		return comp_data, 0
+		
+		for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
+		
+		return comp_data, symbols["HEADER"]
 
 	def compile_other_data(self, head_ofs: int) -> (bytearray, dict):
 		"""
@@ -254,8 +262,24 @@ class Song:
 			subel = self.sub_event_lists[ch][i]
 			symbols[subel.get_sym_name(ch, i)] = head_ofs
 
-			comp_subel = subel.compile(ch)
+			comp_subel = subel.compile(ch, symbols)
 			comp_data.extend(comp_subel)
 			head_ofs += len(comp_subel)
 
 		return (comp_data, symbols)
+
+	def compile_header(self, symbols: dict) -> bytearray:
+		comp_data = bytearray(33)
+		
+		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
+			channel_ofs = symbols[self.channels[i].get_sym_name(i)]
+			comp_data[i*2]     = channel_ofs & 0xFF
+			comp_data[i*2 + 1] = channel_ofs >> 8
+
+		comp_data[28] = self.tma_counter & 0xFF 
+		comp_data[29] = self.tma_counter >> 8
+		comp_data[30] = 1                       # Base time
+		comp_data[31] = symbols["INSTRUMENTS"] & 0xFF
+		comp_data[32] = symbols["INSTRUMENTS"] >> 8
+
+		return comp_data
