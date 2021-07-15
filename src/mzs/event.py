@@ -102,6 +102,7 @@ class SongComWaitTicks(SongCommand):
 	on how much ticks need to be waited
 	"""
 
+@dataclass
 class SongComSetChannelVol(SongCommand):
 	"""
 	Song Command Set Channel Volume
