@@ -65,6 +65,7 @@ class Song:
 
 			for subel in self.sub_event_lists[ch]:
 				total_count += len(subel.events)
+		self._ch_reorder()
 		return self
 
 	def calculate_tma_cnt(frequency: int):
@@ -144,7 +145,7 @@ class Song:
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				if row.volume != None and row.volume != current_volume:
-					volume_difference = 
+					#volume_difference = 
 					current_volume = row.volume
 					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
 					sub_el.events.append(SongComSetChannelVol(mlm_volume))
@@ -167,6 +168,23 @@ class Song:
 		
 		sub_el.events.append(SongComReturnFromSubEL())
 		return sub_el
+
+	def _ch_reorder(self):
+		return
+		print("a")
+		DMF2MLM_CH_ORDER = [
+			6, 7, 8, 9,      # FM channels
+			10, 11, 12,      # SSG channels
+			0, 1, 2, 3, 4, 5 # ADPCMA channels
+		]
+
+		ch_els = self.channels.copy()
+		ch_subels = self.sub_event_lists.copy()
+
+		for i in range(len(DMF2MLM_CH_ORDER)):
+			self.channels[DMF2MLM_CH_ORDER[i]]        = ch_els[i]
+			self.sub_event_lists[DMF2MLM_CH_ORDER[i]] = ch_subels[i]
+
 
 	def ymvol_to_mlmvol(ch_kind: ChannelKind, va: int):
 		"""
