@@ -7,7 +7,7 @@ from typing import Optional
 class SongEvent:
 	timing: int = 0
 
-	def compile(self, ch: int, ticks) -> bytearray:
+	def compile(self, ch: int, ticks = None) -> bytearray:
 		comp_data = bytearray()
 		if isinstance(ticks, int):
 			t = ticks
@@ -80,7 +80,7 @@ class SongComNoteOff(SongCommand):
 		t -= 0xFF
 
 		if t > 0:
-			comp_waitcom_data = super(SongNote, self).compile(ch, t)
+			comp_waitcom_data = super(SongComNoteOff, self).compile(ch, t)
 			comp_data.extend(comp_waitcom_data)
 
 		return comp_data
@@ -101,7 +101,7 @@ class SongComChangeInstrument(SongCommand):
 		comp_data[1] = self.instrument
 
 		if self.timing > 0:
-			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_waitcom_data = super(SongComChangeInstrument, self).compile(ch)
 			comp_data.extend(comp_waitcom_data)
 
 		return comp_data
@@ -126,13 +126,12 @@ class SongComSetChannelVol(SongCommand):
 	volume: int
 
 	def compile(self, ch: int, _symbols: dict) -> bytearray:
-		comp_data = bytearray(2)
-
-		comp_data[0] = 0x05        # Set channel volume command
-		comp_data[1] = self.volume 
+		comp_data = bytearray()
+		comp_data.append(0x05)        # Set channel volume command
+		comp_data.append(self.volume)  
 
 		if self.timing > 0:
-			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_waitcom_data = super(SongComSetChannelVol, self).compile(ch)
 			comp_data.extend(comp_waitcom_data)
 
 		return comp_data
@@ -158,7 +157,7 @@ class SongComJumpToSubEL(SongCommand):
 		comp_data = bytearray()
 
 		if self.timing > 0:
-			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_waitcom_data = super(SongComJumpToSubEL, self).compile(ch)
 			comp_data.extend(comp_waitcom_data)
 
 		comp_data.append(0x20) # Return from SubEL command
@@ -223,8 +222,38 @@ class SongComReturnFromSubEL(SongCommand):
 		comp_data = bytearray()
 
 		if self.timing > 0:
-			comp_waitcom_data = super(SongNote, self).compile(ch)
+			comp_waitcom_data = super(SongComReturnFromSubEL, self).compile(ch)
 			comp_data.extend(comp_waitcom_data)
 
 		comp_data.append(0x20) # Return from SubEL command
+		return comp_data
+
+@dataclass
+class SongComOffsetChannelVol(SongCommand):
+	"""
+	Song Command Set Channel Volume
+	------------------------------
+	Offsets the channel's volume in ranges
+	inbetween -8~-1 and 1~8. It's shorter than
+	setting the volume directly.
+	"""
+	volume_offset: int
+
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = bytearray()
+		
+		vol_shift_offsets = [
+			3, 3, 3, 3, 3, 3, # ADPCM-A channels
+			1, 1, 1, 1,       # FM channels
+			#4, 4, 4,         # SSG channels, should never be indexed
+		]
+
+		ofs_nibble = utils.clamp(abs(self.volume_offset), 1, 8) - 1
+		if self.volume_offset < 0: ofs_nibble |= 8 # Set sign bit to negative
+		comp_data.append(0x30 | ofs_nibble)
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongComSetChannelVol, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
 		return comp_data

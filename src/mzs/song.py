@@ -123,7 +123,6 @@ class Song:
 			0x0F, 0x0F, 0x0F,                  # SSG
 			0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F # ADPCMA
 		]
-
 		sub_el = EventList("sub")
 		sub_el.events.append(SongComWaitTicks())
 
@@ -145,6 +144,7 @@ class Song:
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				if row.volume != None and row.volume != current_volume:
+					volume_difference = 
 					current_volume = row.volume
 					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
 					sub_el.events.append(SongComSetChannelVol(mlm_volume))
