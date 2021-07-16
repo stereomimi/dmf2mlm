@@ -630,7 +630,7 @@ class Module:
 
 		for _, eq_pats_iter in groupby(patterns_with_ids, key=lambda tup: tup[0]):
 			eq_pats = list(eq_pats_iter)
-			if len(eq_pats) > 1:
+			if len(eq_pats) >= 1:
 				merged_pat_idx = eq_pats[0][1]
 				for pat, i in eq_pats:
 					self.pattern_matrix.matrix[ch][i] = merged_pat_idx

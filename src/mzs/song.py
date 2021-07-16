@@ -170,8 +170,6 @@ class Song:
 		return sub_el
 
 	def _ch_reorder(self):
-		return
-		print("a")
 		DMF2MLM_CH_ORDER = [
 			6, 7, 8, 9,      # FM channels
 			10, 11, 12,      # SSG channels
@@ -241,7 +239,7 @@ class Song:
 		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
 			raise RuntimeError("Compiled sound data overflow")
 		
-		for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
+		#for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
 		
 		return comp_data, symbols["HEADER"]
 
