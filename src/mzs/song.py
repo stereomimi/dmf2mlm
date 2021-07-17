@@ -57,14 +57,14 @@ class Song:
 		self.tma_counter = Song.calculate_tma_cnt(hz_value)
 		self._instruments_from_dmf(module)
 
-		total_count = 0
-
 		for ch in range(len(module.pattern_matrix.matrix)):
-			self._ch_event_lists_from_dmf_pat_matrix(module.pattern_matrix, ch)
-			self._sub_event_lists_from_dmf(module, ch)
+			if module.pattern_matrix.matrix[ch] == None:
+				self.channels[ch] = None
+				self.sub_event_lists[ch] = None
+			else:
+				self._ch_event_lists_from_dmf_pat_matrix(module.pattern_matrix, ch)
+				self._sub_event_lists_from_dmf(module, ch)
 
-			for subel in self.sub_event_lists[ch]:
-				total_count += len(subel.events)
 		self._ch_reorder()
 		return self
 
@@ -209,7 +209,6 @@ class Song:
 		Returns the compiled address and the song offset
 		in a tuple, in that order.
 		"""
-		print("")
 		comp_data = bytearray()
 		symbols = {} # symbol_name: address
 
@@ -224,14 +223,15 @@ class Song:
 		head_ofs += len(comp_inst_data)
 
 		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
-			comp_subel_data, subel_syms = self.compile_sub_els(i, head_ofs)
-			comp_data.extend(comp_subel_data)
-			symbols |= subel_syms
-			head_ofs += len(comp_subel_data)
+			if self.channels[i] != None:
+				comp_subel_data, subel_syms = self.compile_sub_els(i, head_ofs)
+				comp_data.extend(comp_subel_data)
+				symbols |= subel_syms
+				head_ofs += len(comp_subel_data)
 
-			symbols[self.channels[i].get_sym_name(i)] = head_ofs
-			comp_el_data = self.channels[i].compile(i, symbols)
-			head_ofs += len(comp_el_data)
+				symbols[self.channels[i].get_sym_name(i)] = head_ofs
+				comp_el_data = self.channels[i].compile(i, symbols)
+				head_ofs += len(comp_el_data)
 		
 		symbols["HEADER"] = head_ofs
 		comp_header_data = self.compile_header(symbols)
@@ -288,9 +288,13 @@ class Song:
 		comp_data = bytearray(33)
 		
 		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
-			channel_ofs = symbols[self.channels[i].get_sym_name(i)]
-			comp_data[i*2]     = channel_ofs & 0xFF
-			comp_data[i*2 + 1] = channel_ofs >> 8
+			if self.channels[i] == None:
+				comp_data[i*2]     = 0x00
+				comp_data[i*2 + 1] = 0x00
+			else:
+				channel_ofs = symbols[self.channels[i].get_sym_name(i)]
+				comp_data[i*2]     = channel_ofs & 0xFF
+				comp_data[i*2 + 1] = channel_ofs >> 8
 
 		comp_data[28] = self.tma_counter & 0xFF 
 		comp_data[29] = self.tma_counter >> 8

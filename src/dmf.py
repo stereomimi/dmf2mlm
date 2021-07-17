@@ -328,6 +328,11 @@ class Pattern:
 		#print(self_hash, "\t", other_hash, "\tself < other\t", self_hash < other_hash)
 		return self_hash < other_hash
 
+	def is_empty(self) -> bool:
+		for row in self.rows:
+			if not row.is_empty(): return False
+		return True
+
 class PatternMatrix:
 	rows_per_pattern: int
 	rows_in_pattern_matrix: int
@@ -621,7 +626,8 @@ class Module:
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
 			self.optimize_equal_patterns(ch)
-			
+			self.optimize_empty_channels(ch)
+
 	def optimize_equal_patterns(self, ch: int):
 		patterns_with_ids = [] # [(pattern, id); ...]
 		for i in range(len(self.patterns[ch])):
@@ -633,6 +639,20 @@ class Module:
 			merged_pat_idx = eq_pats[0][1]
 			for pat, i in eq_pats:
 				self.pattern_matrix.matrix[ch][i] = merged_pat_idx
+
+	def optimize_empty_channels(self, ch: int):
+		"""
+		If the channel is completely empty, it sets its
+		pattern matrix to None
+		"""
+		unique_patterns = set(self.pattern_matrix.matrix[ch])
+		is_empty = True
+
+		for pat_idx in unique_patterns:
+			if not self.patterns[ch][pat_idx].is_empty():
+				is_empty = False
+				break
+		if is_empty: self.pattern_matrix.matrix[ch] = None
 
 def get_channel_kind(channel: int):
 	if channel <= FM_CH4:    return ChannelKind.FM
