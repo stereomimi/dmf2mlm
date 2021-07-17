@@ -518,10 +518,6 @@ class Module:
 		self.parse_patterns()
 		self.parse_samples()
 
-	def optimize(self):
-		for ch in range(SYSTEM_TOTAL_CHANNELS):
-			self.optimize_equal_patterns(ch)
-
 	def check_file(self):
 		format_string = self.data[0:16].decode(encoding='ascii')
 		return format_string == ".DelekDefleMask."
@@ -622,6 +618,10 @@ class Module:
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
 
+	def optimize(self):
+		for ch in range(SYSTEM_TOTAL_CHANNELS):
+			self.optimize_equal_patterns(ch)
+			
 	def optimize_equal_patterns(self, ch: int):
 		patterns_with_ids = [] # [(pattern, id); ...]
 		for i in range(len(self.patterns[ch])):
@@ -630,10 +630,9 @@ class Module:
 
 		for _, eq_pats_iter in groupby(patterns_with_ids, key=lambda tup: tup[0]):
 			eq_pats = list(eq_pats_iter)
-			if len(eq_pats) >= 1:
-				merged_pat_idx = eq_pats[0][1]
-				for pat, i in eq_pats:
-					self.pattern_matrix.matrix[ch][i] = merged_pat_idx
+			merged_pat_idx = eq_pats[0][1]
+			for pat, i in eq_pats:
+				self.pattern_matrix.matrix[ch][i] = merged_pat_idx
 
 def get_channel_kind(channel: int):
 	if channel <= FM_CH4:    return ChannelKind.FM
