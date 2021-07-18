@@ -231,15 +231,18 @@ class Song:
 
 				symbols[self.channels[i].get_sym_name(i)] = head_ofs
 				comp_el_data = self.channels[i].compile(i, symbols)
+				comp_data.extend(comp_el_data)
 				head_ofs += len(comp_el_data)
 		
 		symbols["HEADER"] = head_ofs
 		comp_header_data = self.compile_header(symbols)
+		comp_data.extend(comp_header_data)
+		head_ofs += len(comp_header_data)
 
 		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
 			raise RuntimeError("Compiled sound data overflow")
 		
-		#for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
+		for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
 		
 		return comp_data, symbols["HEADER"]
 
@@ -285,21 +288,22 @@ class Song:
 		return (comp_data, symbols)
 
 	def compile_header(self, symbols: dict) -> bytearray:
-		comp_data = bytearray(33)
+		comp_data = bytearray()
 		
-		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
+		for i in range(len(self.channels)):
 			if self.channels[i] == None:
-				comp_data[i*2]     = 0x00
-				comp_data[i*2 + 1] = 0x00
+				comp_data.append(0x00) # LSB
+				comp_data.append(0x00) # MSB
 			else:
 				channel_ofs = symbols[self.channels[i].get_sym_name(i)]
-				comp_data[i*2]     = channel_ofs & 0xFF
-				comp_data[i*2 + 1] = channel_ofs >> 8
+				comp_data.append(channel_ofs & 0xFF) # LSB
+				comp_data.append(channel_ofs >> 8)   # MSB
 
-		comp_data[28] = self.tma_counter & 0xFF 
-		comp_data[29] = self.tma_counter >> 8
-		comp_data[30] = 1                       # Base time
-		comp_data[31] = symbols["INSTRUMENTS"] & 0xFF
-		comp_data[32] = symbols["INSTRUMENTS"] >> 8
+		comp_data.append(self.tma_counter & 0xFF)       # TMA LSB
+		comp_data.append(self.tma_counter >> 8)         # TMA MSB
+		comp_data.append(1)                             # Base time
+		comp_data.append(symbols["INSTRUMENTS"] & 0xFF) # Inst. LSB
+		comp_data.append(symbols["INSTRUMENTS"] >> 8)   # Inst. MSB
 
+		print(list(comp_data))
 		return comp_data
