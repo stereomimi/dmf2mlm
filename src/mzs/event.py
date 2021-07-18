@@ -55,6 +55,7 @@ class SongNote(SongEvent):
 class SongCommand(SongEvent):
 	pass
 
+@dataclass
 class SongComEOEL(SongCommand):
 	"""
 	Song Command End of Event List
@@ -160,7 +161,11 @@ class SongComJumpToSubEL(SongCommand):
 			comp_waitcom_data = super(SongComJumpToSubEL, self).compile(ch)
 			comp_data.extend(comp_waitcom_data)
 
-		comp_data.append(0x20) # Return from SubEL command
+		sym_name = "SUBEL:CH{0:01X};{1:02X}".format(ch, self.sub_el_idx)
+		sub_el_addr = symbols[sym_name]
+		comp_data.append(0x09)               # Jump to SubEL command
+		comp_data.append(sub_el_addr & 0xFF) # SubEL addr LSB
+		comp_data.append(sub_el_addr >> 8)   # SubEL addr MSB
 		return comp_data
 
 class SongComPositionJump(SongCommand):

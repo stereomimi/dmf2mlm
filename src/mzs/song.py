@@ -30,6 +30,10 @@ class EventList:
 
 		return comp_data
 
+	def print(self):
+		for event in self.events:
+			print(event)
+
 class Song:
 	channels: [EventList]
 	sub_event_lists: [[EventList]] # sub_event_lists[channel][sub_el]
@@ -105,6 +109,7 @@ class Song:
 			sub_el_idx = unique_patterns.index(pattern)
 			self.channels[ch].events.append(SongComJumpToSubEL(sub_el_idx))
 			self.sub_el_idx_matrix[ch].append(sub_el_idx)
+		self.channels[ch].events.append(SongComEOEL())
 
 	def _sub_event_lists_from_dmf(self, module: dmf.Module, ch: int):
 		converted_sub_els = set()
@@ -161,10 +166,10 @@ class Song:
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1
 			else:          ticks_since_last_com += time_info.tick_time_2
 
-		#if i % 2 == 0: 
-		#	utils.list_top(sub_el.events).timing = time_info.tick_time_1 + ticks_since_last_com
-		#else:          
-		#	utils.list_top(sub_el.events).timing = time_info.tick_time_2 + ticks_since_last_com
+		if i % 2 == 0: 
+			utils.list_top(sub_el.events).timing = time_info.tick_time_1 + ticks_since_last_com
+		else:          
+			utils.list_top(sub_el.events).timing = time_info.tick_time_2 + ticks_since_last_com
 		
 		sub_el.events.append(SongComReturnFromSubEL())
 		return sub_el
@@ -242,7 +247,7 @@ class Song:
 		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
 			raise RuntimeError("Compiled sound data overflow")
 		
-		for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
+		#for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
 		
 		return comp_data, symbols["HEADER"]
 
@@ -305,5 +310,4 @@ class Song:
 		comp_data.append(symbols["INSTRUMENTS"] & 0xFF) # Inst. LSB
 		comp_data.append(symbols["INSTRUMENTS"] >> 8)   # Inst. MSB
 
-		print(list(comp_data))
 		return comp_data

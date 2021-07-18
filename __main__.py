@@ -18,6 +18,8 @@ print(f"Converting...", end='', flush=True)
 mlm_sdata = mzs.SoundData.from_dmf(dmf_modules)
 print(" OK")
 
+mlm_sdata.songs[0].channels[0].print()
+
 print(f"Compiling...", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile()
 print(" OK")
