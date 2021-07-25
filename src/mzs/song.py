@@ -32,7 +32,10 @@ class EventList:
 
 	def print(self):
 		for event in self.events:
-			print(event)
+			if self.is_sub:
+				print("\t", str(event.timing).ljust(5), event)
+			else:
+				print("0x{0:04X} ".format(event.timing), event)
 
 class Song:
 	channels: [EventList]
@@ -87,9 +90,6 @@ class Song:
 
 		if len(module.instruments) > 255:
 			raise RuntimeError("Maximum supported instrument count is 255")
-		
-		self.instruments.append(ADPCMAInstrument(0))
-		self.other_data.append(SampleList())
 
 		for dinst in module.instruments:
 			mzs_inst = None
@@ -99,6 +99,9 @@ class Song:
 				mzs_inst, new_odata = SSGInstrument.from_dmf_inst(dinst, len(self.other_data))
 				self.other_data.extend(new_odata)
 			self.instruments.append(mzs_inst)
+
+		self.instruments.append(ADPCMAInstrument(len(self.other_data)))
+		self.other_data.append(SampleList())
 
 	def _ch_event_lists_from_dmf_pat_matrix(self, pat_mat: dmf.PatternMatrix, ch: int):
 		unique_patterns = list(set(pat_mat.matrix[ch]))
@@ -166,10 +169,7 @@ class Song:
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1
 			else:          ticks_since_last_com += time_info.tick_time_2
 
-		if i % 2 == 0: 
-			utils.list_top(sub_el.events).timing = time_info.tick_time_1 + ticks_since_last_com
-		else:          
-			utils.list_top(sub_el.events).timing = time_info.tick_time_2 + ticks_since_last_com
+		utils.list_top(sub_el.events).timing = ticks_since_last_com
 		
 		sub_el.events.append(SongComReturnFromSubEL())
 		return sub_el
@@ -202,6 +202,10 @@ class Song:
 		"""
 		Only used for FM and SSG channels
 		"""
+		if note == 12: # C is be expressed as 12 instead than 0
+			note = 0 
+			octave += 1
+			
 		if ch_kind == ChannelKind.FM:
 			return (note | (octave<<4)) & 0xFF
 		elif ch_kind == ChannelKind.SSG:
@@ -271,7 +275,8 @@ class Song:
 		comp_data = bytearray()
 
 		for inst in self.instruments:
-			comp_data.extend(inst.compile(symbols))
+			inst_data = inst.compile(symbols)
+			comp_data.extend(inst_data)
 
 		return comp_data
 

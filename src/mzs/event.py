@@ -62,7 +62,16 @@ class SongComEOEL(SongCommand):
 	------------------------------
 	ends the playback for the current channel
 	"""
-	pass
+	
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = bytearray()
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongComSetChannelVol, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
+		comp_data.append(0x00) # End of EL command
+		return comp_data
 
 @dataclass
 class SongComNoteOff(SongCommand):

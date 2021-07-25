@@ -40,6 +40,16 @@ class FMOperator:
 		self.sr = dmfop.d2r
 		self.slrr = dmfop.rr | (dmfop.sl<<4)
 		self.eg = dmfop.ssg_mode | (int(dmfop.ssg_enabled)<<3)
+
+		print("--------------------------------------------------------")
+		print("DTMUL\tmult | (dt<<4)  \t0x{0:02X}\t{1} | ({2} << 4)".format(self.dtmul, dmfop.mult, dmfop.dt))
+		print("TL   \ttl              \t0x{0:02X}\t{1}".format(self.tl, dmfop.tl))
+		print("KSAR \ta | (rs<<6)     \t0x{0:02X}\t{1} | ({2} << 6)".format(self.ksar, dmfop.ar, dmfop.rs))
+		print("AMDR \td | (am<<7)     \t0x{0:02X}\t{1} | ({2} << 7)".format(self.amdr, dmfop.dr, int(dmfop.am)))
+		print("SR   \td2              \t0x{0:02X}\t{1}".format(self.sr, dmfop.d2r))
+		print("SLRR \tr | (s<<4)      \t0x{0:02X}\t{1} | ({2} << 4)".format(self.slrr, dmfop.rr, dmfop.sl))
+		print("SSGEG\tegmd | (egen<<3)\t0x{0:02X}\t{1} | ({2} << 3)".format(self.eg, dmfop.ssg_mode, int(dmfop.ssg_enabled)))
+
 		return self
 
 	def compile(self) -> bytearray:
@@ -71,8 +81,12 @@ class FMInstrument(Instrument):
 		self.amspms = dinst.fms | (dinst.ams<<4)
 		self.op_enable = [True, True, True, True] # All enabled by default
 
+		print("FBALGO\talgo | (fb<<3)\t0x{0:02X}\t{1} | ({2} << 3)".format(self.fbalgo, dinst.algorithm, dinst.feedback))
+		print("AMSPMS\tpms | (ams<<4)\t0x{0:02X}\t{1} | ({2} << 3)".format(self.amspms, dinst.fms, dinst.ams))
+
 		for dop in dinst.operators:
 			self.operators.append(FMOperator.from_dmf_op(dop))
+		print("--------------------------------------------------------\n")
 		return self
 
 	def compile(self, symbols: dict) -> bytearray:

@@ -79,7 +79,7 @@ class FMInstrument(Instrument):
 	operators: [FMOperator] = [] # should have 4 operators
 
 	def __init__(self, data: bytes):
-		OP_INDEX = [0, 2, 1, 3] # Due to questionable choices the operators need to be reordered.
+		OP_INDEX = [0, 2, 1, 3]
 		self.operators = [[], [], [], []]
 
 		head_ofs = 0
