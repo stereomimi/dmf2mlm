@@ -1,4 +1,5 @@
 from ..defs import *
+from ..import utils
 from dataclasses import dataclass
 from typing import Optional
 
@@ -39,7 +40,7 @@ class SongNote(SongEvent):
 		comp_data = bytearray(2)
 		t = self.timing
 
-		comp_data[0] = 0x80 | (t & 0x7F)
+		comp_data[0] = 0x80 | utils.clamp(t, 0, 0x7F)
 		comp_data[1] = self.note
 		t -= 0x7F
 

@@ -269,11 +269,11 @@ class PatternRow:
 		is_empty = (self.note == None) & (self.octave == None)
 		is_empty &= (self.volume == None) & (self.instrument == None)
 
-		for effect in self.effects:
-			if effect.code != EffectCode.EMPTY:
-				is_empty = False
-			else:
-				is_empty &= effect.value == None
+		#for effect in self.effects:
+		#	if effect.code != EffectCode.EMPTY:
+		#		is_empty = False
+		#	else:
+		#		is_empty &= effect.value == None
 
 		return is_empty
 
@@ -552,7 +552,9 @@ class Module:
 		frames_mode = FramesMode(self.data[self.head_ofs+3])
 		using_custom_hz = bool(self.data[self.head_ofs+4])
 		if using_custom_hz:
-			self.time_info.hz_value = int(str(self.data[self.head_ofs+5]), 16)
+			
+			self.time_info.hz_value = self.data[self.head_ofs+5:self.head_ofs+8].decode('ascii').rstrip('\x00')
+			self.time_info.hz_value = int(self.time_info.hz_value)
 		else:
 			if frames_mode == FramesMode.PAL: self.time_info.hz_value = 50
 			else:                             self.time_info.hz_value = 60

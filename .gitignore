@@ -132,3 +132,4 @@ dmypy.json
 *.dmf
 *.bin
 *.raw
+*.wav

@@ -43,6 +43,7 @@ class Song:
 	instruments: [Instrument]
 	other_data: [OtherData]
 	tma_counter: int
+	time_base: int
 
 	sub_el_idx_matrix: [[int]] # sub_el_idx_matrix[channel][id]
 
@@ -60,7 +61,7 @@ class Song:
 
 	def from_dmf(module: dmf.Module):
 		self = Song()
-		hz_value = module.time_info.hz_value * module.time_info.time_base
+		hz_value = module.time_info.hz_value
 		self.tma_counter = Song.calculate_tma_cnt(hz_value)
 		self._instruments_from_dmf(module)
 
@@ -83,9 +84,7 @@ class Song:
 
 	def _instruments_from_dmf(self, module: dmf.Module):
 		"""
-		DMF Instruments are offset by 1, since Instrument 0
-		is used for ADPCM-A samples. This function also
-		assumes self.other_data is empty
+		This function assumes self.other_data is empty
 		"""
 
 		if len(module.instruments) > 255:
@@ -127,18 +126,13 @@ class Song:
 				converted_sub_els.add(sub_el_idx)
 
 	def _sub_el_from_pattern(self, pattern: dmf.Pattern, ch: int, time_info: dmf.TimeInfo):
-		STARTING_VOLUMES = [
-			0x7F, 0x7F, 0x7F, 0x7F,            # FM
-			0x0F, 0x0F, 0x0F,                  # SSG
-			0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F # ADPCMA
-		]
 		sub_el = EventList("sub")
 		sub_el.events.append(SongComWaitTicks())
 
 		ch_kind = dmf.get_channel_kind(ch)
 		ticks_since_last_com = 0
-		current_instrument = 0
-		current_volume = STARTING_VOLUMES[ch]
+		current_instrument = None
+		current_volume = None
 
 		for i in range(len(pattern.rows)):
 			row = pattern.rows[i]
@@ -157,7 +151,7 @@ class Song:
 					current_volume = row.volume
 					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
 					sub_el.events.append(SongComSetChannelVol(mlm_volume))
-				
+
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
 				elif row.note != None and ch_kind == ChannelKind.ADPCMA:
@@ -166,8 +160,8 @@ class Song:
 					mlm_note = Song.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
 					sub_el.events.append(SongNote(mlm_note))
 
-			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1
-			else:          ticks_since_last_com += time_info.tick_time_2
+			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
+			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
 
 		utils.list_top(sub_el.events).timing = ticks_since_last_com
 		
