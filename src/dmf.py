@@ -552,7 +552,6 @@ class Module:
 		frames_mode = FramesMode(self.data[self.head_ofs+3])
 		using_custom_hz = bool(self.data[self.head_ofs+4])
 		if using_custom_hz:
-			
 			self.time_info.hz_value = self.data[self.head_ofs+5:self.head_ofs+8].decode('ascii').rstrip('\x00')
 			self.time_info.hz_value = int(self.time_info.hz_value)
 		else:

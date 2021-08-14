@@ -109,13 +109,14 @@ class SSGInstrument(Instrument):
 		self.mix_macro = None
 		self.vol_macro = None
 		self.arp_macro = None
+		self.mixing = SSGMixing.TONE
 
 	def from_dmf_inst(dinst: dmf.STDInstrument, odata_count: int):
 		self = SSGInstrument()
 		self.mixing = SSGInstrument._get_mix_from_dinst(dinst)
-		mix_odata = SSGMacro.from_dmf_macro(dinst.chmode_macro, "nibble")
-		vol_odata = SSGMacro.from_dmf_macro(dinst.volume_macro, "nibble")
-		arp_odata = SSGMacro.from_dmf_macro(dinst.arpeggio_macro, "byte")
+		mix_odata = SSGMacro.from_dmf_macro(dinst.chmode_macro, "mix")
+		vol_odata = SSGMacro.from_dmf_macro(dinst.volume_macro, "vol")
+		arp_odata = SSGMacro.from_dmf_macro(dinst.arpeggio_macro, "arp")
 
 		new_odata = []
 		if mix_odata != None:
@@ -137,8 +138,7 @@ class SSGInstrument(Instrument):
 		mix_macro_len = len(dinst.chmode_macro.envelope_values)
 		if mix_macro_len == 0:
 			return SSGMixing.TONE
-		base_mix = SSGMixing(dinst.chmode_macro.envelope_values[0]+1)
-		return base_mix
+		return SSGMixing(dinst.chmode_macro.envelope_values[0]+1)
 
 	def compile(self, symbols: dict) -> bytearray:
 		comp_data = bytearray(MLM_INSTRUMENT_SIZE)

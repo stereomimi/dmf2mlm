@@ -87,8 +87,8 @@ class Song:
 		This function assumes self.other_data is empty
 		"""
 
-		if len(module.instruments) > 255:
-			raise RuntimeError("Maximum supported instrument count is 255")
+		if len(module.instruments) > 254:
+			raise RuntimeError("Maximum supported instrument count is 254")
 
 		for dinst in module.instruments:
 			mzs_inst = None
@@ -99,6 +99,7 @@ class Song:
 				self.other_data.extend(new_odata)
 			self.instruments.append(mzs_inst)
 
+		self.instruments.append(SSGInstrument()) # Empty SSG Instrument
 		self.instruments.append(ADPCMAInstrument(len(self.other_data)))
 		self.other_data.append(SampleList())
 
@@ -144,6 +145,9 @@ class Song:
 
 				if row.instrument != None and row.instrument != current_instrument:
 					current_instrument = row.instrument
+					if isinstance(self.instruments[current_instrument], FMInstrument):
+						if ch_kind == ChannelKind.SSG:
+							current_instrument = len(self.instruments)-2
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				if row.volume != None and row.volume != current_volume:
@@ -203,7 +207,9 @@ class Song:
 		if ch_kind == ChannelKind.FM:
 			return (note | (octave<<4)) & 0xFF
 		elif ch_kind == ChannelKind.SSG:
-			return octave*12 + note
+			if octave < 2:
+				raise RuntimeError("Unsupported SSG Octave (lower than 2)")
+			return (octave-2)*12 + note
 		else:
 			raise RuntimeError("Unsupported channel kind")
 

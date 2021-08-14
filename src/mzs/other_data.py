@@ -36,7 +36,7 @@ class SSGMacro(OtherData):
 	loop_position: int
 	data: bytearray
 
-	def from_dmf_macro(dmacro: dmf.STDMacro, el_size: str):
+	def from_dmf_macro(dmacro: dmf.STDMacro, kind: str):
 		macro_val_count = len(dmacro.envelope_values)
 		if macro_val_count == 0:
 			return None
@@ -47,16 +47,26 @@ class SSGMacro(OtherData):
 		else:
 			self.loop_position = dmacro.loop_position
 
-		if el_size == "byte" or macro_val_count == 1:
+		if kind == "arp" or macro_val_count == 1:
 			self.data = bytearray(map(utils.signed2unsigned_8, dmacro.envelope_values))
 			self.length = len(self.data)
-		elif el_size == "nibble":
+
+		elif kind == "vol":
 			self.data = bytearray()
 			for i in range(0, macro_val_count, 2):
 				byte = dmacro.envelope_values[i]
 				byte |= dmacro.envelope_values[i+1] << 4
 				self.data.append(byte)
 			self.length = len(self.data) * 2
+
+		elif kind == "mix":
+			self.data = bytearray()
+			for i in range(0, macro_val_count, 2):
+				byte = dmacro.envelope_values[i] + 1
+				byte |= (dmacro.envelope_values[i+1] + 1) << 4
+				self.data.append(byte)
+			self.length = len(self.data) * 2
+			
 		else:
 			raise RuntimeError("Invalid MZS SSG Macro element size")
 
