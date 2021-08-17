@@ -1,5 +1,6 @@
 from .instrument import *
 from .other_data import *
+from .pa_encoder import *
 from .event import *
 from .. import dmf
 from ..defs import *

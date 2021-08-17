@@ -22,3 +22,7 @@ ADPCM-A samples
 
 - If the used patterns in a pattern matrix channel are $00, $01, $10, and $03
 then they will be respectively converted into the channel's sub-EL 0, 1, 3, and 2. first the unique used patterns are found (`list(set(pat_matrix))`), then they're sorted (`unique_pats.sort()`); the sub-EL id is found from said unique pattern list (`unique_pats.find(pattern)`)
+
+## TODO
+
+- Find a way to merge samples, since it's likely that the songs will share samples
