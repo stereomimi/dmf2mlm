@@ -38,8 +38,12 @@ print(" OK")
 #print_info(mlm_sdata)
 
 print(f"Compiling...", end='', flush=True)
-mlm_compiled_sdata = mlm_sdata.compile()
+mlm_compiled_sdata = mlm_sdata.compile_sdata()
+mlm_compiled_vrom = mlm_sdata.compile_vrom()
 print(" OK")
 
 with open("m1_sdata.bin", "wb") as file:
 	file.write(mlm_compiled_sdata)
+
+with open("vrom.bin", "wb") as file:
+	file.write(mlm_compiled_vrom)

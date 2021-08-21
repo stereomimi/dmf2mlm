@@ -1,7 +1,7 @@
 from .instrument import *
 from .other_data import *
-from .pa_encoder import *
 from .event import *
+from .sample import *
 from .. import dmf
 from ..defs import *
 
@@ -60,11 +60,11 @@ class Song:
 			self.sub_event_lists.append([])
 			self.sub_el_idx_matrix.append([])
 
-	def from_dmf(module: dmf.Module):
+	def from_dmf(module: dmf.Module, samples: [(Sample, int, int)]):
 		self = Song()
 		hz_value = module.time_info.hz_value
 		self.tma_counter = Song.calculate_tma_cnt(hz_value)
-		self._instruments_from_dmf(module)
+		self._instruments_from_dmf(module, samples)
 
 		for ch in range(len(module.pattern_matrix.matrix)):
 			if module.pattern_matrix.matrix[ch] == None:
@@ -83,12 +83,12 @@ class Song:
 			raise RuntimeError("Invalid timer a counter value")
 		return round(cnt)
 
-	def _instruments_from_dmf(self, module: dmf.Module):
+	def _instruments_from_dmf(self, module: dmf.Module, samples: [(Sample, int, int)]):
 		"""
 		This function assumes self.other_data is empty
 		"""
 
-		if len(module.instruments) > 254:
+		if len(module.instruments) > 255:
 			raise RuntimeError("Maximum supported instrument count is 254")
 
 		for dinst in module.instruments:
@@ -100,9 +100,11 @@ class Song:
 				self.other_data.extend(new_odata)
 			self.instruments.append(mzs_inst)
 
-		self.instruments.append(SSGInstrument()) # Empty SSG Instrument
+		#self.instruments.append(SSGInstrument()) # Empty SSG Instrument
 		self.instruments.append(ADPCMAInstrument(len(self.other_data)))
-		self.other_data.append(SampleList())
+		sample_addresses = list(map(lambda x: (x[1], x[2]), samples))
+		self.other_data.append(SampleList(sample_addresses))
+
 
 	def _ch_event_lists_from_dmf_pat_matrix(self, pat_mat: dmf.PatternMatrix, ch: int):
 		unique_patterns = list(set(pat_mat.matrix[ch]))
@@ -146,9 +148,9 @@ class Song:
 
 				if row.instrument != None and row.instrument != current_instrument:
 					current_instrument = row.instrument
-					if isinstance(self.instruments[current_instrument], FMInstrument):
-						if ch_kind == ChannelKind.SSG:
-							current_instrument = len(self.instruments)-2
+					#if isinstance(self.instruments[current_instrument], FMInstrument):
+					#	if ch_kind == ChannelKind.SSG:
+					#		current_instrument = len(self.instruments)-2
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				if row.volume != None and row.volume != current_volume:

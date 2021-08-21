@@ -8,18 +8,17 @@ class OtherData:
 	pass
 
 class SampleList(OtherData):
-	start_addresses: [int]
-	end_addresses: [int]
+	addresses: [(int, int)]
 
-	def __init__(self):
-		self.addresses = [] # [(start_addr, end_addr), ...]
+	def __init__(self, sample_addresses=[]):
+		self.addresses = sample_addresses # [(start_addr, end_addr), ...]
 
 	def compile(self) -> bytearray:
 		smp_count = len(self.addresses)
 		comp_data: bytearray
 
 		if smp_count > 0:
-			comp_data = bytearray(smp_count * 4)
+			comp_data = bytearray(smp_count * 4 + 1)
 			comp_data[0] = smp_count-1
 			for i in range(smp_count):
 				comp_data[i*4 + 1] = self.addresses[i][0] & 0xFF # Start LSB
