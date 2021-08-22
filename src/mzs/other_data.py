@@ -19,14 +19,14 @@ class SampleList(OtherData):
 
 		if smp_count > 0:
 			comp_data = bytearray(smp_count * 4 + 1)
-			comp_data[0] = smp_count-1
+			comp_data[0] = smp_count
 			for i in range(smp_count):
 				comp_data[i*4 + 1] = self.addresses[i][0] & 0xFF # Start LSB
 				comp_data[i*4 + 2] = self.addresses[i][0] >> 8   # Start MSB
 				comp_data[i*4 + 3] = self.addresses[i][1] & 0xFF # End LSB
 				comp_data[i*4 + 4] = self.addresses[i][1] >> 8   # End MSB
 		else: 
-			comp_data = bytearray(5) # zero-filled
+			comp_data = bytearray([0x00]) # zero-filled
 
 		return comp_data
 
