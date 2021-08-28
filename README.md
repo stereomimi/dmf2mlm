@@ -1,6 +1,8 @@
 # dmf2mlm
 Program that converts deflemask project files to a neogeo M1ROM running the Mezz'Estate audio driver
 
+[freem's adpcma encoder](https://github.com/freem/adpcma) MUST be in $PATH as `adpcma`. 
+
 ## Conversion steps
 
 1. Parse the DMF modules (dmf.py)

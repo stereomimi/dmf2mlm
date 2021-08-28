@@ -45,6 +45,7 @@ class Song:
 	other_data: [OtherData]
 	tma_counter: int
 	time_base: int
+	samples: [(Sample, int, int)] # (sample, start_addr, end_addr)
 
 	sub_el_idx_matrix: [[int]] # sub_el_idx_matrix[channel][id]
 
@@ -55,16 +56,21 @@ class Song:
 		self.other_data = []
 		self.tma_counter = 0
 		self.sub_el_idx_matrix = []
+		self.samples = []
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			self.channels.append(EventList())
 			self.sub_event_lists.append([])
 			self.sub_el_idx_matrix.append([])
 
-	def from_dmf(module: dmf.Module, samples: [(Sample, int, int)]):
+	def from_dmf(module: dmf.Module, vrom_ofs: int):
 		self = Song()
 		hz_value = module.time_info.hz_value
 		self.tma_counter = Song.calculate_tma_cnt(hz_value)
-		self._instruments_from_dmf(module, samples)
+
+		self._samples_from_dmf_mod(module, vrom_ofs)
+		self.samples = map(lambda x: (x[0], x[1]+vrom_ofs, x[2]+vrom_ofs), self.samples)
+		self.samples = list(self.samples)
+		self._instruments_from_dmf(module, self.samples)
 
 		for ch in range(len(module.pattern_matrix.matrix)):
 			if module.pattern_matrix.matrix[ch] == None:
@@ -105,6 +111,24 @@ class Song:
 		sample_addresses = list(map(lambda x: (x[1], x[2]), samples))
 		self.other_data.append(SampleList(sample_addresses))
 
+	def _samples_from_dmf_mod(self, module: dmf.Module, vrom_ofs: int):
+		start_addr = vrom_ofs
+		if len(self.samples) != 0:
+			start_addr = utils.list_top(self.samples)[2] + 1
+
+		for dsmp in module.samples:
+			smp = Sample.from_dmf_sample(dsmp)
+			smp_len = len(smp.data) // 256
+			end_addr = start_addr + smp_len
+
+			saddr_page = start_addr >> 12
+			eaddr_page = end_addr >> 12
+			if saddr_page != eaddr_page:
+				start_addr = eaddr_page << 12
+				end_addr = start_addr + smp_len
+
+			self.samples.append((smp, start_addr, end_addr))
+			start_addr = end_addr+1
 
 	def _ch_event_lists_from_dmf_pat_matrix(self, pat_mat: dmf.PatternMatrix, ch: int):
 		unique_patterns = list(set(pat_mat.matrix[ch]))
@@ -161,8 +185,6 @@ class Song:
 
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
-				elif row.note != None and ch_kind == ChannelKind.ADPCMA:
-					sub_el.events.append(SongNote(row.note))
 				elif row.note != None and row.octave != None:
 					mlm_note = Song.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
 					sub_el.events.append(SongNote(mlm_note))
@@ -204,8 +226,9 @@ class Song:
 		Only used for FM and SSG channels
 		"""
 		if note == 12: # C is be expressed as 12 instead than 0
-			note = 0 
-			octave += 1
+			note = 0
+			if isinstance(octave, int): 
+				octave += 1
 			
 		if ch_kind == ChannelKind.FM:
 			return (note | (octave<<4)) & 0xFF
@@ -213,8 +236,8 @@ class Song:
 			if octave < 2:
 				raise RuntimeError("Unsupported SSG Octave (lower than 2)")
 			return (octave-2)*12 + note
-		else:
-			raise RuntimeError("Unsupported channel kind")
+		else: # Channel kind is ADPCMA
+			return note
 
 	def compile(self, head_ofs: int) -> (bytearray, int):
 		"""
