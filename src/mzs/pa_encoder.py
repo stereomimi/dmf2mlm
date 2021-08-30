@@ -13,14 +13,18 @@ class ADPCMAEncoder:
 		self.cmd_name = cmd_name
 
 	def ym_encode(self):
-		with open("tmp.pcm", "wb") as file:
+		PCM_FILE_NAME  = "tmp.pcm"
+		PCMA_FILE_NAME = "tmp.pcma"
+
+		with open(PCM_FILE_NAME, "wb") as file:
 			file.write(self.buffer)
-			code = os.system(f"{self.cmd_name} {file.name} tmp.pcma")
+			file.flush()
+			code = os.system(f"{self.cmd_name} {PCM_FILE_NAME} {PCMA_FILE_NAME} > /dev/null")
 			if code != 0x00:
 				raise RuntimeError("Error while running ADPCM-A Encoder")
 		
-		with open("tmp.pcma", "rb") as file:
+		with open(PCMA_FILE_NAME, "rb") as file:
 			self.out_buffer = file.read()
 
-		os.remove("tmp.pcm")
-		os.remove("tmp.pcma")
+		os.remove(PCM_FILE_NAME)
+		os.remove(PCMA_FILE_NAME)

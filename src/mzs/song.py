@@ -116,6 +116,7 @@ class Song:
 		if len(self.samples) != 0:
 			start_addr = utils.list_top(self.samples)[2] + 1
 
+		i = 0
 		for dsmp in module.samples:
 			smp = Sample.from_dmf_sample(dsmp)
 			smp_len = len(smp.data) // 256
@@ -128,12 +129,27 @@ class Song:
 				end_addr = start_addr + smp_len
 
 			self.samples.append((smp, start_addr, end_addr))
+			#print("====", i, "====")
+			#print("smp:", smp)
+			#print("sad:", "${0:04X}".format(start_addr))
+			#print("ead:", "${0:04X}".format(end_addr))
 			start_addr = end_addr+1
+			i += 1
+
 
 	def _ch_event_lists_from_dmf_pat_matrix(self, pat_mat: dmf.PatternMatrix, ch: int):
+		"""
+		Here the main event lists, that jump to the sub-event
+		lists that contain the actual patterns, are created.
+		"""
 		unique_patterns = list(set(pat_mat.matrix[ch]))
 		unique_patterns.sort()
 
+		ch_kind = dmf.get_channel_kind(ch)
+		if ch_kind == dmf.ChannelKind.ADPCMA:
+			pa_inst = len(self.instruments) - 1
+			self.channels[ch].events.append(SongComChangeInstrument(pa_inst))
+			
 		for row in range(pat_mat.rows_in_pattern_matrix):
 			pattern = pat_mat.matrix[ch][row]
 			sub_el_idx = unique_patterns.index(pattern)

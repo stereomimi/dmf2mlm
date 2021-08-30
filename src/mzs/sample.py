@@ -25,3 +25,6 @@ class Sample:
 		sample.data = bytearray(pa_encoder.out_buffer)
 		sample.data = sample.data.ljust(ceil(len(sample.data) / 256), PA_PAD_CHAR)
 		return sample
+
+	def __str__(self):
+		return f"Sample (size: {len(self.data)})"

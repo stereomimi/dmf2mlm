@@ -423,7 +423,6 @@ class Sample:
 
 		return new_sample
 
-
 	def apply_amplitude(self):
 		"""
 		Returns sample with amplitude modification 
@@ -451,6 +450,13 @@ class Sample:
 
 		return new_sample
 
+	def __str__(self):
+		string = f"DMF.Sample {self.name} (\n"
+		string += f"\tbit width: {int(self.bits)}\n"
+		string += f"\tpitch:     {self.pitch}\n"
+		string += f"\tamplitude: {self.amplitude}\n"
+		string += f"\tdata size: {len(self.data)}\n)"
+		return string
 
 ######################## MODULE ########################
 
@@ -623,6 +629,8 @@ class Module:
 			sample = sample.apply_pitch().apply_amplitude()
 			self.samples.append(sample)
 			self.head_ofs += sample.dmf_size
+			#print("\n====", _, "====")
+			#print(sample)
 
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
