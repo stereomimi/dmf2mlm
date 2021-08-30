@@ -149,7 +149,7 @@ class Song:
 		if ch_kind == dmf.ChannelKind.ADPCMA:
 			pa_inst = len(self.instruments) - 1
 			self.channels[ch].events.append(SongComChangeInstrument(pa_inst))
-			
+
 		for row in range(pat_mat.rows_in_pattern_matrix):
 			pattern = pat_mat.matrix[ch][row]
 			sub_el_idx = unique_patterns.index(pattern)
@@ -170,6 +170,9 @@ class Song:
 				converted_sub_els.add(sub_el_idx)
 
 	def _sub_el_from_pattern(self, pattern: dmf.Pattern, ch: int, time_info: dmf.TimeInfo):
+		"""
+		Here DMF patterns get converted into MLM sub-event lists
+		"""
 		sub_el = EventList("sub")
 		sub_el.events.append(SongComWaitTicks())
 
@@ -186,11 +189,8 @@ class Song:
 				last_com.timing = ticks_since_last_com
 				ticks_since_last_com = 0
 
-				if row.instrument != None and row.instrument != current_instrument:
+				if row.instrument != None and row.instrument != current_instrument and ch_kind != dmf.ChannelKind.ADPCMA:
 					current_instrument = row.instrument
-					#if isinstance(self.instruments[current_instrument], FMInstrument):
-					#	if ch_kind == ChannelKind.SSG:
-					#		current_instrument = len(self.instruments)-2
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				if row.volume != None and row.volume != current_volume:
