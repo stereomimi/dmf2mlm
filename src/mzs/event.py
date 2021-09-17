@@ -17,12 +17,7 @@ class SongEvent:
 			
 
 		while (t > 0):
-			if t > 0x100:
-				comp_data.append(0x04)            # Wait word command
-				comp_data.append(t & 0xFF)        # ticks LSB
-				comp_data.append((t >> 8) & 0xFF) # ticks MSB
-				t -= 0xFFFF
-			elif t > 0x10:
+			if t > 0x10:
 				comp_data.append(0x03)         # Wait byte command
 				comp_data.append((t-1) & 0xFF) # ticks 
 				t -= 0x100
