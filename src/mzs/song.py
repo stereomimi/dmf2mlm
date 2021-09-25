@@ -55,6 +55,7 @@ class Song:
 		self.instruments = []
 		self.other_data = []
 		self.tma_counter = 0
+		self.time_base = 0
 		self.sub_el_idx_matrix = []
 		self.samples = []
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
@@ -63,8 +64,28 @@ class Song:
 			self.sub_el_idx_matrix.append([])
 
 	def from_dmf(module: dmf.Module, vrom_ofs: int):
+		TMA_MAX_FREQ = 55560.0
+		TMA_MIN_FREQ = 54.25
+		MAX_TIME_BASE = 255
+		MIN_FREQ = TMA_MIN_FREQ / MAX_TIME_BASE
 		self = Song()
 		hz_value = module.time_info.hz_value
+
+		# There's probably a better way to do this, but I'd really
+		# like using the base time feature in the driver eventually
+		if hz_value > TMA_MAX_FREQ:
+			raise RuntimeError("Invalid frequency (higher than 55.56kHz)")
+		elif hz_value < TMA_MIN_FREQ:
+			for i in range(2, MAX_TIME_BASE+1):
+				if hz_value*i > TMA_MAX_FREQ:
+					raise RuntimeError("Invalid frequency")
+				elif hz_value*i > TMA_MIN_FREQ:
+					self.time_base = i
+					hz_value *= i
+					break
+			if hz_value < TMA_MIN_FREQ:
+				raise RuntimeError(f"Invalid frequency (lower than {MIN_FREQ}Hz)")
+
 		self.tma_counter = Song.calculate_tma_cnt(hz_value)
 
 		self._samples_from_dmf_mod(module, vrom_ofs)

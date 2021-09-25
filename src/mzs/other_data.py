@@ -53,8 +53,12 @@ class SSGMacro(OtherData):
 		elif kind == "vol":
 			self.data = bytearray()
 			for i in range(0, macro_val_count, 2):
+				msnibble = 0
+				if i < (macro_val_count-1):
+					msnibble = dmacro.envelope_values[i+1]
+					
 				byte = dmacro.envelope_values[i]
-				byte |= dmacro.envelope_values[i+1] << 4
+				byte |= msnibble << 4
 				self.data.append(byte)
 			self.length = len(self.data) * 2
 

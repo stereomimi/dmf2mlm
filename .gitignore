@@ -133,3 +133,4 @@ dmypy.json
 *.bin
 *.raw
 *.wav
+.test-copy.sh
