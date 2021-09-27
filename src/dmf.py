@@ -449,7 +449,7 @@ class Sample:
 			new_sample.data.append(int(new_s))
 
 		return new_sample
-
+		
 	def __str__(self):
 		string = f"DMF.Sample {self.name} (\n"
 		string += f"\tbit width: {int(self.bits)}\n"

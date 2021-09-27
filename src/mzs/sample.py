@@ -8,8 +8,9 @@ class Sample:
 	def from_dmf_sample(dsmp: dmf.Sample):
 		PA_PAD_CHAR = b'\x80'
 
-		if dsmp.bits != 16: 
-			raise RuntimeError("Uncompatible sample (sample width isn't 16)")
+		
+		#if dsmp.bits != 16: 
+		#	raise RuntimeError("Uncompatible sample (sample width isn't 16)")
 		if dsmp.pitch != 0:     dsmp.apply_pitch()
 		if dsmp.amplitude != 0: dsmp.apply_amplitude()
 

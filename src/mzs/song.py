@@ -55,7 +55,7 @@ class Song:
 		self.instruments = []
 		self.other_data = []
 		self.tma_counter = 0
-		self.time_base = 0
+		self.time_base = 1
 		self.sub_el_idx_matrix = []
 		self.samples = []
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
@@ -362,7 +362,7 @@ class Song:
 
 	def compile_header(self, symbols: dict) -> bytearray:
 		comp_data = bytearray()
-		
+
 		for i in range(len(self.channels)):
 			if self.channels[i] == None:
 				comp_data.append(0x00) # LSB
@@ -374,7 +374,7 @@ class Song:
 
 		comp_data.append(self.tma_counter & 0xFF)       # TMA LSB
 		comp_data.append(self.tma_counter >> 8)         # TMA MSB
-		comp_data.append(1)                             # Base time
+		comp_data.append(self.time_base)                # Base time
 		comp_data.append(symbols["INSTRUMENTS"] & 0xFF) # Inst. LSB
 		comp_data.append(symbols["INSTRUMENTS"] >> 8)   # Inst. MSB
 

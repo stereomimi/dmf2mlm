@@ -27,17 +27,18 @@ class SoundData:
 		return self
 
 	def compile_sdata(self) -> bytearray:
-		header_size = len(self.songs) * 2 + 1
+		header_size = len(self.songs) * 2 + 3
 		comp_sdata = bytearray(header_size)
 		head_ofs = 0
 
-		comp_sdata[head_ofs] = len(self.songs)
+		comp_sdata[head_ofs+2] = len(self.songs)
+
 		head_ofs += header_size # Leave space for MLM header
 
 		for i in range(len(self.songs)):
 			comp_song, song_ofs = self.songs[i].compile(head_ofs)
-			comp_sdata[1 + i*2]     = song_ofs & 0xFF
-			comp_sdata[1 + i*2 + 1] = song_ofs >> 8
+			comp_sdata[3 + i*2]     = song_ofs & 0xFF
+			comp_sdata[3 + i*2 + 1] = song_ofs >> 8
 			comp_sdata.extend(comp_song)
 			head_ofs += len(comp_song)
 		
