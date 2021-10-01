@@ -201,6 +201,7 @@ class Song:
 		ticks_since_last_com = 0
 		current_instrument = None
 		current_volume = None
+		sample_bank = 0
 
 		for i in range(len(pattern.rows)):
 			row = pattern.rows[i]
@@ -209,6 +210,10 @@ class Song:
 				last_com = utils.list_top(sub_el.events)
 				last_com.timing = ticks_since_last_com
 				ticks_since_last_com = 0
+
+				for effect in row.effects:
+					if effect.code == dmf.EffectCode.SET_SAMPLES_BANK:
+						sample_bank = effect.value
 
 				if row.instrument != None and row.instrument != current_instrument and ch_kind != dmf.ChannelKind.ADPCMA:
 					current_instrument = row.instrument
@@ -224,6 +229,7 @@ class Song:
 					sub_el.events.append(SongComNoteOff())
 				elif row.note != None and row.octave != None:
 					mlm_note = Song.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
+					if ch_kind == ChannelKind.ADPCMA: mlm_note += sample_bank * 12
 					sub_el.events.append(SongNote(mlm_note))
 
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
@@ -259,9 +265,6 @@ class Song:
 		return round(MLM_VOL_MAX * va / YM_VOL_MAXS[ch_kind])
 
 	def dmfnote_to_mlmnote(ch_kind: ChannelKind, note: int, octave: int):
-		"""
-		Only used for FM and SSG channels
-		"""
 		if note == 12: # C is be expressed as 12 instead than 0
 			note = 0
 			if isinstance(octave, int): 
