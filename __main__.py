@@ -1,5 +1,5 @@
 from src import dmf,mzs,utils
-import sys
+import sys, argparse
 
 def print_info(mlm_sdata):
 	for i in range(len(mlm_sdata.songs[0].channels)):
@@ -18,15 +18,19 @@ def print_info(mlm_sdata):
 			else:
 				print(event)
 
+parser = argparse.ArgumentParser(description='Convert DMF modules and SFX to an MLM driver compatible format')
+parser.add_argument('--sfx-directory', type=str, help="Path to folder containing wav files (0.wav ... 255.wav)")
+parser.add_argument('dmf_module_paths', type=str, nargs='+', help="The paths to the input DMF files")
+args = parser.parse_args(sys.argv)
 dmf_modules = []
 
-for i in range(1, len(sys.argv)):
-	with open(sys.argv[i], "rb") as file:
-		print(f"Parsing '{sys.argv[i]}'...", end='', flush=True)
+for i in range(1, len(args.dmf_module_paths)):
+	with open(args.dmf_module_paths[i], "rb") as file:
+		print(f"Parsing '{args.dmf_module_paths[i]}'...", end='', flush=True)
 		mod = dmf.Module(file.read())
 		print(" OK")
 
-		print(f"Optimizing '{sys.argv[i]}'...", end='', flush=True)
+		print(f"Optimizing '{args.dmf_module_paths[i]}'...", end='', flush=True)
 		mod.optimize()
 		print(" OK")
 		dmf_modules.append(mod)
@@ -35,7 +39,7 @@ print(f"Converting...", end='\n', flush=True)
 mlm_sdata = mzs.SoundData.from_dmf(dmf_modules)
 print(" OK")
 
-print_info(mlm_sdata)
+#print_info(mlm_sdata)
 
 print(f"Compiling...", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()
