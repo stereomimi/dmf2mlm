@@ -128,9 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# other files
+# other files and directories
 *.dmf
 *.bin
 *.raw
 *.wav
 .test-copy.sh
+sfx
