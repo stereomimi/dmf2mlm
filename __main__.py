@@ -21,6 +21,7 @@ def print_info(mlm_sdata):
 
 parser = argparse.ArgumentParser(description='Convert DMF modules and SFX to an MLM driver compatible format')
 parser.add_argument('--sfx-directory', type=Path, help="Path to folder containing wav files (Only absolute paths; Must be 18500Hz 16bit mono)")
+parser.add_argument('--sfx-header', type=Path, help="Where to save the generated SFX c header (Only absolute paths)")
 parser.add_argument('dmf_module_paths', type=str, nargs='+', help="The paths to the input DMF files")
 args = parser.parse_args(sys.argv)
 dmf_modules = []
@@ -28,7 +29,11 @@ sfx_samples = None
 
 if args.sfx_directory != None:
 	sfx_samples = sfx.SFXSamples(args.sfx_directory)
-	print(sfx_samples.generate_c_header())
+
+	if args.sfx_header != None:
+		c_header = sfx_samples.generate_c_header()
+		with open(args.sfx_header, "w") as file:
+			file.write(c_header)
 
 for i in range(1, len(args.dmf_module_paths)):
 	with open(args.dmf_module_paths[i], "rb") as file:

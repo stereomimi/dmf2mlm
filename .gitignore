@@ -133,5 +133,6 @@ dmypy.json
 *.bin
 *.raw
 *.wav
+*.h
 .test-copy.sh
 sfx

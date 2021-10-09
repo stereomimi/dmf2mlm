@@ -14,7 +14,7 @@ class SFXSamples:
 
     def generate_c_header(self) -> str:
         CONST_PREFIX = "SFX_"
-        c_header = "/*\n  [SFX CONSTANTS]\n  Header generated using 'dmf2mlm'\n  https://github.com/GbaCretin/dmf2mlm\n*/\n\n"
+        c_header = "/*\n  ============[SFX CONSTS]============\n  Header generated using 'dmf2mlm'\n  https://github.com/GbaCretin/dmf2mlm\n*/\n\n"
 
         for i in range(len(self.paths)):
             sfx_name = self.paths[i].name.removesuffix(".wav")
