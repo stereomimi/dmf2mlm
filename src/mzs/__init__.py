@@ -4,6 +4,7 @@ from ..defs import *
 from .song import *
 from .sample import *
 from .pa_encoder import *
+from .other_data import *
 
 class SoundData:
 	"""
@@ -52,26 +53,34 @@ class SoundData:
 	def compile_sdata(self) -> bytearray:
 		header_size = len(self.songs) * 2 + 3
 		comp_sdata = bytearray(header_size)
-		head_ofs = 0
 
-		comp_sdata[head_ofs+2] = len(self.songs)
+		# The SFX Sample list will be located immediately 
+		# after the header, point to that
+		comp_sdata[0] = header_size & 0xFF
+		comp_sdata[1] = header_size >> 8
+		comp_sdata[2] = len(self.songs)
 
-		head_ofs += header_size # Leave space for MLM header
+		sfx_addrs = list(map(lambda x: (x[1], x[2]), self.sfx))
+		smp_list = SampleList(sfx_addrs).compile()
+		comp_sdata.extend(smp_list)
 
 		for i in range(len(self.songs)):
-			comp_song, song_ofs = self.songs[i].compile(head_ofs)
+			comp_song, song_ofs = self.songs[i].compile(len(comp_sdata))
 			comp_sdata[3 + i*2]     = song_ofs & 0xFF
 			comp_sdata[3 + i*2 + 1] = song_ofs >> 8
 			comp_sdata.extend(comp_song)
-			head_ofs += len(comp_song)
 		
 		return comp_sdata
 
 	def compile_vrom(self) -> bytearray:
 		FILL_CHAR = 0x80
-		vrom_size = 0
-		for song in self.songs: 
-			vrom_size += (utils.list_top(song.samples)[2]+1) * 256
+
+		# Check to see whether the song's top vrom end smp ofs is larger
+		# (song samples were added after sfx) or if the opposite is true
+		last_song = utils.list_top(self.songs)
+		song_vrom_end_ofs = utils.list_top(last_song.samples)[2] * 256
+		sfx_vrom_end_ofs = utils.list_top(self.sfx)[2] * 256
+		vrom_size = max(song_vrom_end_ofs, sfx_vrom_end_ofs)
 
 		comp_vrom = bytearray([FILL_CHAR] * vrom_size)
 		if vrom_size > 16777216:
@@ -82,4 +91,9 @@ class SoundData:
 				smp_saddr = sample[1] * 256
 				smp_eaddr = sample[2] * 256
 				comp_vrom[smp_saddr:smp_eaddr] = sample[0].data
+		for sample in self.sfx:
+			smp_saddr = sample[1] * 256
+			smp_eaddr = sample[2] * 256
+			comp_vrom[smp_saddr:smp_eaddr] = sample[0].data
+
 		return comp_vrom
