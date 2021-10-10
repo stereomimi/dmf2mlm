@@ -6,8 +6,7 @@ class Sample:
 	data: bytearray # Size is always divisible by 256 bytes
 
 	def from_dmf_sample(dsmp: dmf.Sample):
-		PA_PAD_CHAR = b'\x80'
-
+		#PA_PAD_CHAR = b'\x80'
 		#if dsmp.bits != 16: 
 		#	raise RuntimeError("Uncompatible sample (sample width isn't 16)")
 		if dsmp.pitch != 0:     dsmp.apply_pitch()
@@ -22,8 +21,14 @@ class Sample:
 		out_buffer = pa_encoder.ym_encode_pcm(in_buffer)
 
 		sample = Sample()
-		sample.data = bytearray(out_buffer)
-		sample.data = sample.data.ljust(ceil(len(sample.data) / 256), PA_PAD_CHAR)
+		sample.data = out_buffer # The sample data is already padded by the converter
+		#sample.data = sample.data.ljust(ceil(len(sample.data) / 256), PA_PAD_CHAR)
+		return sample
+
+	def from_wav(wav_path):
+		pa_encoder = ADPCMAEncoder()
+		sample = Sample()
+		sample.data = bytearray(pa_encoder.ym_encode_path(wav_path))
 		return sample
 
 	def __str__(self):

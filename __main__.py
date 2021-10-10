@@ -53,10 +53,15 @@ for i in range(len(args.dmf_module_paths)):
 		print(" OK")
 		dmf_modules.append(mod)
 
-print(f"Converting...", end='\n', flush=True)
 mlm_sdata = mzs.SoundData()
+print(f"Converting DMFs...", end='', flush=True)
 mlm_sdata.add_dmfs(dmf_modules)
 print(" OK")
+
+if sfx_samples != None:
+	print(f"Converting SFX...", end='', flush=True)
+	mlm_sdata.add_sfx(sfx_samples)
+	print(" OK")
 
 #print_info(mlm_sdata)
 

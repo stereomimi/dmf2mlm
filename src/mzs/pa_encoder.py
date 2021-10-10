@@ -7,10 +7,12 @@ class ADPCMAEncoder:
     def __init__(self, cmd_name="adpcma"):
         self.cmd_name = cmd_name
 
-    def call_encoder(self, in_path: str, out_path: str, verbose: bool = False):
-        cmd = f"{self.cmd_name} {in_path} {out_path}"
+    def _call_encoder(self, in_path, out_path, verbose: bool = False):
+        cmd = f"{self.cmd_name} '{in_path}' '{out_path}'"
         if not verbose: 
             cmd += " > /dev/null"
+        else:
+            print(cmd)
         code = os.system(cmd)
         if code != 0x00:
             raise RuntimeError("Error while running ADPCM-A Encoder")
@@ -23,11 +25,22 @@ class ADPCMAEncoder:
         with open(PCM_FILE_NAME, "wb") as file:
             file.write(buffer)
             file.flush()
-            self.call_encoder(PCM_FILE_NAME, PCMA_FILE_NAME)
+            self._call_encoder(PCM_FILE_NAME, PCMA_FILE_NAME)
         
         with open(PCMA_FILE_NAME, "rb") as file:
             out_buffer = file.read()
 
         os.remove(PCM_FILE_NAME)
         os.remove(PCMA_FILE_NAME)
+        return out_buffer
+
+    def ym_encode_path(self, in_path: bytes) -> bytes:
+        PCMA_FILE_NAME = "tmp.pcma"
+        out_buffer: bytes
+
+        self._call_encoder(in_path, PCMA_FILE_NAME)
+        with open(PCMA_FILE_NAME, "rb") as file:
+            out_buffer = file.read()
+        os.remove(PCMA_FILE_NAME)
+
         return out_buffer

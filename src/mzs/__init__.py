@@ -3,6 +3,7 @@ from .. import dmf,utils,sfx
 from ..defs import *
 from .song import *
 from .sample import *
+from .pa_encoder import *
 
 class SoundData:
 	"""
@@ -26,8 +27,26 @@ class SoundData:
 			self.vrom_ofs = utils.list_top(song.samples)[2]+1
 		return self
 	
-	def add_sfx(self, sfx_smps: sfx.SFXSamples):
-		pass
+	def add_sfx(self, sfx_smps: sfx.SFXSamples, verbose: bool = False):
+		pa_encoder = ADPCMAEncoder()
+		start_addr = self.vrom_ofs
+		for in_path in sfx_smps.paths:
+			if verbose: print(f"Converting SFX '{in_path}'...", end='', flush=True)
+			smp = Sample.from_wav(in_path)
+			smp_len = len(smp.data) // 256
+			end_addr = start_addr + smp_len
+
+			# ADPCM-A channels can't have samples
+			# going through different VROM pages
+			saddr_page = start_addr >> 12
+			eaddr_page = end_addr >> 12
+			if saddr_page != eaddr_page:
+				start_addr = eaddr_page << 12
+				end_addr = start_addr + smp_len
+			
+			self.sfx.append((smp, start_addr, end_addr))
+			start_addr = end_addr+1
+			if verbose: print(" OK")
 
 
 	def compile_sdata(self) -> bytearray:

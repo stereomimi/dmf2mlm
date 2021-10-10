@@ -134,10 +134,9 @@ class Song:
 
 	def _samples_from_dmf_mod(self, module: dmf.Module, vrom_ofs: int):
 		start_addr = vrom_ofs
-		if len(self.samples) != 0:
-			start_addr = utils.list_top(self.samples)[2] + 1
+		#if len(self.samples) != 0: ???????
+		#	start_addr = utils.list_top(self.samples)[2] + 1
 
-		i = 0
 		for dsmp in module.samples:
 			smp = Sample.from_dmf_sample(dsmp)
 			smp_len = len(smp.data) // 256
@@ -150,12 +149,7 @@ class Song:
 				end_addr = start_addr + smp_len
 
 			self.samples.append((smp, start_addr, end_addr))
-			#print("====", i, "====")
-			#print("smp:", smp)
-			#print("sad:", "${0:04X}".format(start_addr))
-			#print("ead:", "${0:04X}".format(end_addr))
 			start_addr = end_addr+1
-			i += 1
 
 
 	def _ch_event_lists_from_dmf_pat_matrix(self, pat_mat: dmf.PatternMatrix, ch: int):
