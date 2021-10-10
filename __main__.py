@@ -1,6 +1,6 @@
 from src import dmf,mzs,utils,sfx
 from pathlib import Path
-import sys, argparse
+import argparse
 
 def print_info(mlm_sdata):
 	for i in range(len(mlm_sdata.songs[0].channels)):
@@ -20,22 +20,29 @@ def print_info(mlm_sdata):
 				print(event)
 
 parser = argparse.ArgumentParser(description='Convert DMF modules and SFX to an MLM driver compatible format')
+parser.add_argument('dmf_module_paths', type=str, nargs='+', help="The paths to the input DMF files")
 parser.add_argument('--sfx-directory', type=Path, help="Path to folder containing wav files (Only absolute paths; Must be 18500Hz 16bit mono)")
 parser.add_argument('--sfx-header', type=Path, help="Where to save the generated SFX c header (Only absolute paths)")
-parser.add_argument('dmf_module_paths', type=str, nargs='+', help="The paths to the input DMF files")
-args = parser.parse_args(sys.argv)
+args = parser.parse_args()
 dmf_modules = []
 sfx_samples = None
 
 if args.sfx_directory != None:
+	print("Parsing SFX... ", end='', flush=True)
 	sfx_samples = sfx.SFXSamples(args.sfx_directory)
+	print(" OK")
 
 	if args.sfx_header != None:
+		print("Generating SFX Header...", end='', flush=True)
 		c_header = sfx_samples.generate_c_header()
+		print(" OK")
+		print(f"Saving SFX Header as '{args.sfx_header}'...", end='', flush=True)
 		with open(args.sfx_header, "w") as file:
 			file.write(c_header)
+		print(" OK")
+			
 
-for i in range(1, len(args.dmf_module_paths)):
+for i in range(len(args.dmf_module_paths)):
 	with open(args.dmf_module_paths[i], "rb") as file:
 		print(f"Parsing '{args.dmf_module_paths[i]}'...", end='', flush=True)
 		mod = dmf.Module(file.read())
@@ -47,7 +54,8 @@ for i in range(1, len(args.dmf_module_paths)):
 		dmf_modules.append(mod)
 
 print(f"Converting...", end='\n', flush=True)
-mlm_sdata = mzs.SoundData.from_dmf(dmf_modules)
+mlm_sdata = mzs.SoundData()
+mlm_sdata.add_dmfs(dmf_modules)
 print(" OK")
 
 #print_info(mlm_sdata)

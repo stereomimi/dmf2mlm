@@ -1,5 +1,5 @@
 from enum import Enum, IntEnum
-from .. import dmf,utils
+from .. import dmf,utils,sfx
 from ..defs import *
 from .song import *
 from .sample import *
@@ -11,20 +11,24 @@ class SoundData:
 	"""
 
 	songs: [Song]
+	sfx: [(Sample, int, int)] # (sample, start_addr, end_addr)
+	vrom_ofs: int
 
 	def __init__(self):
 		self.songs = []
-		self.samples = []
+		self.sfx = []
 		self.vrom_ofs = 0
 
-	def from_dmf(modules: [dmf.Module]):
-		self = SoundData()
-		vrom_ofs = 0
+	def add_dmfs(self, modules: [dmf.Module]):
+		self.vrom_ofs = 0
 		for mod in modules:
-			song = Song.from_dmf(mod, vrom_ofs)
+			song = Song.from_dmf(mod, self.vrom_ofs)
 			self.songs.append(song)
-			vrom_ofs = utils.list_top(song.samples)[2]+1
+			self.vrom_ofs = utils.list_top(song.samples)[2]+1
 		return self
+	
+	def add_sfx(self, sfx: sfx.SFXSamples):
+		pass
 
 	def compile_sdata(self) -> bytearray:
 		header_size = len(self.songs) * 2 + 3
