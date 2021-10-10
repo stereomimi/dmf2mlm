@@ -14,15 +14,15 @@ class Sample:
 		if dsmp.amplitude != 0: dsmp.apply_amplitude()
 
 		pa_encoder = ADPCMAEncoder()
-		pa_encoder.buffer = bytearray()
+		in_buffer = bytearray()
 		for short in dsmp.data:
 			short = utils.signed2unsigned_16(short)
-			pa_encoder.buffer.append(short & 0xFF)
-			pa_encoder.buffer.append(short >> 8)
-		pa_encoder.ym_encode()
+			in_buffer.append(short & 0xFF)
+			in_buffer.append(short >> 8)
+		out_buffer = pa_encoder.ym_encode_pcm(in_buffer)
 
 		sample = Sample()
-		sample.data = bytearray(pa_encoder.out_buffer)
+		sample.data = bytearray(out_buffer)
 		sample.data = sample.data.ljust(ceil(len(sample.data) / 256), PA_PAD_CHAR)
 		return sample
 

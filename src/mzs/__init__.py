@@ -20,15 +20,15 @@ class SoundData:
 		self.vrom_ofs = 0
 
 	def add_dmfs(self, modules: [dmf.Module]):
-		self.vrom_ofs = 0
 		for mod in modules:
 			song = Song.from_dmf(mod, self.vrom_ofs)
 			self.songs.append(song)
 			self.vrom_ofs = utils.list_top(song.samples)[2]+1
 		return self
 	
-	def add_sfx(self, sfx: sfx.SFXSamples):
+	def add_sfx(self, sfx_smps: sfx.SFXSamples):
 		pass
+
 
 	def compile_sdata(self) -> bytearray:
 		header_size = len(self.songs) * 2 + 3
