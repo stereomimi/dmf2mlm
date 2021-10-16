@@ -74,13 +74,15 @@ class SoundData:
 
 	def compile_vrom(self) -> bytearray:
 		FILL_CHAR = 0x80
-
+		vrom_size = 0
 		# Check to see whether the song's top vrom end smp ofs is larger
 		# (song samples were added after sfx) or if the opposite is true
-		last_song = utils.list_top(self.songs)
-		song_vrom_end_ofs = utils.list_top(last_song.samples)[2] * 256
-		sfx_vrom_end_ofs = utils.list_top(self.sfx)[2] * 256
-		vrom_size = max(song_vrom_end_ofs, sfx_vrom_end_ofs)
+		if len(self.sfx) > 0:
+			vrom_size = utils.list_top(self.sfx)[2] * 256
+		if len(self.songs) > 0:
+			last_song = utils.list_top(self.songs)
+			song_vrom_end_ofs = utils.list_top(last_song.samples)[2] * 256
+			vrom_size = max(song_vrom_end_ofs, vrom_size)
 
 		comp_vrom = bytearray([FILL_CHAR] * vrom_size)
 		if vrom_size > 16777216:
