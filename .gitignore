@@ -136,3 +136,5 @@ dmypy.json
 *.h
 .test-copy.sh
 sfx
+_sfxs
+.*
