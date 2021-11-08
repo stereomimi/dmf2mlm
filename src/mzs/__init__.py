@@ -33,7 +33,7 @@ class SoundData:
 		start_addr = self.vrom_ofs
 		for in_path in sfx_smps.paths:
 			if verbose: print(f"Converting SFX '{in_path}'...", end='', flush=True)
-			smp = Sample.from_wav(in_path)
+			smp = Sample.from_wav(in_path, verbose)
 			smp_len = len(smp.data) // 256
 			end_addr = start_addr + smp_len
 

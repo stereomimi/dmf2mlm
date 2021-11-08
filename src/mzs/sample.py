@@ -25,10 +25,10 @@ class Sample:
 		#sample.data = sample.data.ljust(ceil(len(sample.data) / 256), PA_PAD_CHAR)
 		return sample
 
-	def from_wav(wav_path):
+	def from_wav(wav_path, verbose: bool = False):
 		pa_encoder = ADPCMAEncoder()
 		sample = Sample()
-		sample.data = bytearray(pa_encoder.ym_encode_path(wav_path))
+		sample.data = bytearray(pa_encoder.ym_encode_path(wav_path, verbose))
 		return sample
 
 	def __str__(self):
