@@ -60,10 +60,10 @@ print(" OK")
 
 if sfx_samples != None:
 	print(f"Converting SFX...", end='', flush=True)
-	mlm_sdata.add_sfx(sfx_samples, True)
+	mlm_sdata.add_sfx(sfx_samples, False)
 	print(" OK")
 
-#print_info(mlm_sdata)
+print_info(mlm_sdata)
 
 print(f"Compiling...", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()

@@ -25,7 +25,8 @@ class SoundData:
 		for mod in modules:
 			song = Song.from_dmf(mod, self.vrom_ofs)
 			self.songs.append(song)
-			self.vrom_ofs = utils.list_top(song.samples)[2]+1
+			if len(song.samples) > 0:
+				self.vrom_ofs = utils.list_top(song.samples)[2]+1
 		return self
 	
 	def add_sfx(self, sfx_smps: sfx.SFXSamples, verbose: bool = False):
@@ -81,8 +82,9 @@ class SoundData:
 			vrom_size = utils.list_top(self.sfx)[2] * 256
 		if len(self.songs) > 0:
 			last_song = utils.list_top(self.songs)
-			song_vrom_end_ofs = utils.list_top(last_song.samples)[2] * 256
-			vrom_size = max(song_vrom_end_ofs, vrom_size)
+			if len(last_song.samples) > 0:
+				song_vrom_end_ofs = utils.list_top(last_song.samples)[2] * 256
+				vrom_size = max(song_vrom_end_ofs, vrom_size)
 
 		comp_vrom = bytearray([FILL_CHAR] * vrom_size)
 		if vrom_size > 16777216:
