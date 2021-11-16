@@ -63,7 +63,7 @@ class SongComEOEL(SongCommand):
 		comp_data = bytearray()
 
 		if self.timing > 0:
-			comp_waitcom_data = super(SongComSetChannelVol, self).compile(ch)
+			comp_waitcom_data = super(SongComEOEL, self).compile(ch)
 			comp_data.extend(comp_waitcom_data)
 
 		comp_data.append(0x00) # End of EL command
@@ -134,7 +134,7 @@ class SongComSetChannelVol(SongCommand):
 	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray()
 		comp_data.append(0x05)        # Set channel volume command
-		comp_data.append(self.volume)  
+		comp_data.append(self.volume)
 
 		if self.timing > 0:
 			comp_waitcom_data = super(SongComSetChannelVol, self).compile(ch)

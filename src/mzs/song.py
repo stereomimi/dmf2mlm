@@ -127,7 +127,6 @@ class Song:
 				self.other_data.extend(new_odata)
 			self.instruments.append(mzs_inst)
 
-		#self.instruments.append(SSGInstrument()) # Empty SSG Instrument
 		self.instruments.append(ADPCMAInstrument(len(self.other_data)))
 		sample_addresses = list(map(lambda x: (x[1], x[2]), samples))
 		self.other_data.append(SampleList(sample_addresses))
@@ -214,7 +213,6 @@ class Song:
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				if row.volume != None and row.volume != current_volume:
-					#volume_difference = 
 					current_volume = row.volume
 					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
 					sub_el.events.append(SongComSetChannelVol(mlm_volume))
@@ -254,9 +252,8 @@ class Song:
 		Takes a volume in YM2610 register ranges (they depend on the channel
 		kind) and converts it into the global MLM volume (0x00 ~ 0xFF)
 		"""
-		YM_VOL_MAXS = [ 0x1F, 0x7F, 0x1F ] # ADPCMA, FM, SSG
-		MLM_VOL_MAX = 0xFF
-		return round(MLM_VOL_MAX * va / YM_VOL_MAXS[ch_kind])
+		YM_VOL_SHIFTS = [3, 1, 4] # ADPCMA, FM, SSG
+		return va << YM_VOL_SHIFTS[ch_kind]
 
 	def dmfnote_to_mlmnote(ch_kind: ChannelKind, note: int, octave: int):
 		if note == 12: # C is be expressed as 12 instead than 0
