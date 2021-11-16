@@ -5,7 +5,7 @@ class SFXSamples:
     paths: [Path]
 
     def __init__(self, sfx_dir_path: Path):
-        self.paths = list(sfx_dir_path.glob('*.wav'))
+        self.paths = list(sfx_dir_path.glob('*.raw'))
         if len(self.paths) == 0:
             self = None
             return
