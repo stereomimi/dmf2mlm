@@ -5,7 +5,8 @@ class SFXSamples:
     paths: [Path]
 
     def __init__(self, sfx_dir_path: Path):
-        self.paths = list(sfx_dir_path.glob('*.raw')).sort()
+        self.paths = list(sfx_dir_path.glob('*.raw'))
+        self.paths.sort(key=lambda x: x.name)
         if len(self.paths) == 0:
             self = None
             return
@@ -17,7 +18,7 @@ class SFXSamples:
         c_header = "/*\n  ============[SFX CONSTS]============\n  Header generated using 'dmf2mlm'\n  https://github.com/GbaCretin/dmf2mlm\n*/\n\n"
 
         for i in range(len(self.paths)):
-            sfx_name = self.paths[i].name.removesuffix(".wav")
+            sfx_name = self.paths[i].name.removesuffix(".raw")
             const_name = "_".join(sfx_name.upper().split()) # Convert to Constant Case
             const_name = CONST_PREFIX + const_name
             c_header += f"#define {const_name} ({i})\n"
