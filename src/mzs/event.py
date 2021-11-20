@@ -1,5 +1,5 @@
 from ..defs import *
-from ..import utils
+from .. import utils
 from dataclasses import dataclass
 from typing import Optional
 
@@ -173,6 +173,7 @@ class SongComJumpToSubEL(SongCommand):
 		comp_data.append(sub_el_addr >> 8)   # SubEL addr MSB
 		return comp_data
 
+@dataclass
 class SongComPositionJump(SongCommand):
 	"""
 	Song Command Position Jump
@@ -180,9 +181,21 @@ class SongComPositionJump(SongCommand):
 	Jumps to a specific event in the current event list.
 	It can be 2 bytes long (using an offset) or 3 bytes
 	long (using a fixed address) depending on the size
-	of the jump
+	of the jump.
 	"""
-	event_idx: int
+	jsel_idx: int # Which Jump To SubEL command it jumps to
+
+	def from_dffx(value: int):
+		return SongComPositionJump(value)
+
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = bytearray()
+
+		comp_data.append(0x0B) # Position jump command
+		comp_data.append(0xFF) # temporary, will be replaced later
+		comp_data.append(0xFF) # idem
+		return comp_data
+		
 
 class SongComPortamentoSlide(SongCommand):
 	"""

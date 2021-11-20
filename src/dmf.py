@@ -269,11 +269,11 @@ class PatternRow:
 		is_empty = (self.note == None) & (self.octave == None)
 		is_empty &= (self.volume == None) & (self.instrument == None)
 
-		#for effect in self.effects:
-		#	if effect.code != EffectCode.EMPTY:
-		#		is_empty = False
-		#	else:
-		#		is_empty &= effect.value == None
+		for effect in self.effects:
+			if effect.code != EffectCode.EMPTY:
+				is_empty = False
+			else:
+				is_empty &= effect.value == None
 
 		return is_empty
 

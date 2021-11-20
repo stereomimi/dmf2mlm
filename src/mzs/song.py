@@ -191,6 +191,10 @@ class Song:
 		"""
 		Here DMF patterns get converted into MLM sub-event lists
 		"""
+		df_fx_to_mlm_event_map = {
+			11: SongComPositionJump
+		}
+
 		sub_el = EventList("sub")
 		sub_el.events.append(SongComWaitTicks())
 
@@ -211,6 +215,10 @@ class Song:
 				for effect in row.effects:
 					if effect.code == dmf.EffectCode.SET_SAMPLES_BANK:
 						sample_bank = effect.value
+					else:
+						if effect.value != None:
+							mlm_event = df_fx_to_mlm_event_map[effect.code]
+							sub_el.events.append(mlm_event.from_dffx(effect.value))
 
 				if row.instrument != None and row.instrument != current_instrument and ch_kind != dmf.ChannelKind.ADPCMA:
 					current_instrument = row.instrument
@@ -250,7 +258,6 @@ class Song:
 			self.channels[DMF2MLM_CH_ORDER[i]]        = ch_els[i]
 			self.sub_event_lists[DMF2MLM_CH_ORDER[i]] = ch_subels[i]
 
-
 	def ymvol_to_mlmvol(ch_kind: ChannelKind, va: int):
 		"""
 		Takes a volume in YM2610 register ranges (they depend on the channel
@@ -281,6 +288,7 @@ class Song:
 		in a tuple, in that order.
 		"""
 		comp_data = bytearray()
+		song_ofs = head_ofs
 
 		comp_odata = self.compile_other_data(head_ofs)
 		comp_data.extend(comp_odata)
@@ -293,6 +301,9 @@ class Song:
 
 		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			if self.channels[i] != None:
+				pjmp_count = 0 # Position JuMP command count
+				jsel_count = 0 # Jump to SubEL command count
+
 				comp_subel_data = self.compile_sub_els(i, head_ofs)
 				comp_data.extend(comp_subel_data)
 				head_ofs += len(comp_subel_data)
@@ -301,11 +312,20 @@ class Song:
 				self.symbols[self.channels[i].get_sym_name(i)] = head_ofs
 				comp_el = bytearray()
 				for event in self.channels[i].events:
+					if isinstance(event, SongComJumpToSubEL):
+						sym_name = "PJMP:CH{0:01X};{1:03X},{2:03X}".format(i, pjmp_count, jsel_count)
+						if sym_name in self.symbols:
+							pjmp_ofs = self.symbols[sym_name] - song_ofs
+							print(song_ofs, self.symbols[sym_name], pjmp_ofs)
+							comp_data[pjmp_ofs]   = head_ofs & 0xFF
+							comp_data[pjmp_ofs+1] = head_ofs >> 8
+							pjmp_count += 1
+						jsel_count += 1
 					comp_event = event.compile(i, self.symbols)
 					comp_el.extend(comp_event)
+					head_ofs += len(comp_event)
 				
 				comp_data.extend(comp_el)
-				head_ofs += len(comp_el)
 		
 		self.symbols["HEADER"] = head_ofs
 		comp_header_data = self.compile_header(self.symbols)
@@ -348,6 +368,7 @@ class Song:
 		Returns compiled other data and a new symbol table
 		"""
 		comp_data = bytearray()
+		pos_jump_count = 0
 
 		for i in range(len(self.sub_event_lists[ch])):
 			subel = self.sub_event_lists[ch][i]
@@ -358,9 +379,14 @@ class Song:
 			for event in subel.events:
 				comp_event = event.compile(ch, self.symbols)
 				comp_subel.extend(comp_event)
+				if isinstance(event, SongComPositionJump):
+					sym_name = "PJMP:CH{0:01X};{1:03X},{2:03X}".format(ch, pos_jump_count, event.jsel_idx)
+					pjmp_ofs = head_ofs + len(comp_event) - 2 # Get the jump address, which is always in last two bytes
+					self.symbols[sym_name] = pjmp_ofs
+					pos_jump_count += 1
+				head_ofs += len(comp_event)
 
 			comp_data.extend(comp_subel)
-			head_ofs += len(comp_subel)
 
 		return comp_data
 
