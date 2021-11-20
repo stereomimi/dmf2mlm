@@ -46,7 +46,7 @@ class Song:
 	tma_counter: int
 	time_base: int
 	samples: [(Sample, int, int)] # (sample, start_addr, end_addr)
-
+	notes_below_b2_present: bool
 	sub_el_idx_matrix: [[int]] # sub_el_idx_matrix[channel][id]
 
 	def __init__(self):
@@ -58,6 +58,7 @@ class Song:
 		self.time_base = 1
 		self.sub_el_idx_matrix = []
 		self.samples = []
+		self.notes_below_b2_present = False
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			self.channels.append(EventList())
 			self.sub_event_lists.append([])
@@ -102,6 +103,8 @@ class Song:
 				self._sub_event_lists_from_dmf(module, ch)
 
 		self._ch_reorder()
+		if self.notes_below_b2_present:
+			print("[WARNING] SSG NOTES LOWER THAN C2 HAVE BEEN SET TO C2")
 		return self
 
 	def calculate_tma_cnt(frequency: int):
@@ -265,7 +268,8 @@ class Song:
 			return (note | (octave<<4)) & 0xFF
 		elif ch_kind == ChannelKind.SSG:
 			if octave < 2:
-				raise RuntimeError("Unsupported SSG Octave (lower than 2)")
+				self.notes_below_b2_present = True
+				return 0
 			return (octave-2)*12 + note
 		else: # Channel kind is ADPCMA
 			return note
