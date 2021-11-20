@@ -48,6 +48,7 @@ class Song:
 	samples: [(Sample, int, int)] # (sample, start_addr, end_addr)
 	notes_below_b2_present: bool
 	sub_el_idx_matrix: [[int]] # sub_el_idx_matrix[channel][id]
+	symbols: {}
 
 	def __init__(self):
 		self.channels = []
@@ -59,6 +60,7 @@ class Song:
 		self.sub_el_idx_matrix = []
 		self.samples = []
 		self.notes_below_b2_present = False
+		self.symbols = {}
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			self.channels.append(EventList())
 			self.sub_event_lists.append([])
@@ -280,63 +282,59 @@ class Song:
 		in a tuple, in that order.
 		"""
 		comp_data = bytearray()
-		symbols = {} # symbol_name: address
 
-		comp_odata, odata_sym = self.compile_other_data(head_ofs)
+		comp_odata = self.compile_other_data(head_ofs)
 		comp_data.extend(comp_odata)
-		symbols |= odata_sym
 		head_ofs += len(comp_odata)
 
-		symbols["INSTRUMENTS"] = head_ofs
-		comp_inst_data = self.compile_instruments(symbols)
+		self.symbols["INSTRUMENTS"] = head_ofs
+		comp_inst_data = self.compile_instruments()
 		comp_data.extend(comp_inst_data)
 		head_ofs += len(comp_inst_data)
 
 		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			if self.channels[i] != None:
-				comp_subel_data, subel_syms = self.compile_sub_els(i, head_ofs)
+				comp_subel_data = self.compile_sub_els(i, head_ofs)
 				comp_data.extend(comp_subel_data)
-				symbols |= subel_syms
 				head_ofs += len(comp_subel_data)
 
-				symbols[self.channels[i].get_sym_name(i)] = head_ofs
-				comp_el_data = self.channels[i].compile(i, symbols)
+				self.symbols[self.channels[i].get_sym_name(i)] = head_ofs
+				comp_el_data = self.channels[i].compile(i, self.symbols)
 				comp_data.extend(comp_el_data)
 				head_ofs += len(comp_el_data)
 		
-		symbols["HEADER"] = head_ofs
-		comp_header_data = self.compile_header(symbols)
+		self.symbols["HEADER"] = head_ofs
+		comp_header_data = self.compile_header(self.symbols)
 		comp_data.extend(comp_header_data)
 		head_ofs += len(comp_header_data)
 
 		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
 			raise RuntimeError("Compiled sound data overflow")
 		
-		#for s in symbols: print(s.ljust(16), "0x{0:04X}".format(symbols[s]))
+		for s in self.symbols: print(s.ljust(16), "0x{0:04X}".format(self.symbols[s]))
 		
-		return comp_data, symbols["HEADER"]
+		return comp_data, self.symbols["HEADER"]
 
 	def compile_other_data(self, head_ofs: int) -> (bytearray, dict):
 		"""
 		Returns compiled other data and a symbol table
 		"""
-		symbols = {}
 		comp_data = bytearray()
 
 		for i in range(len(self.other_data)):
-			symbols[OtherDataIndex(i).get_sym_name()] = head_ofs
+			self.symbols[OtherDataIndex(i).get_sym_name()] = head_ofs
 
 			comp_odata = self.other_data[i].compile()
 			comp_data.extend(comp_odata)
 			head_ofs += len(comp_odata)
 
-		return comp_data, symbols
+		return comp_data
 
-	def compile_instruments(self, symbols: dict) -> bytearray:
+	def compile_instruments(self) -> bytearray:
 		comp_data = bytearray()
 
 		for inst in self.instruments:
-			inst_data = inst.compile(symbols)
+			inst_data = inst.compile(self.symbols)
 			comp_data.extend(inst_data)
 
 		return comp_data
@@ -346,17 +344,16 @@ class Song:
 		Returns compiled other data and a new symbol table
 		"""
 		comp_data = bytearray()
-		symbols = {}
 
 		for i in range(len(self.sub_event_lists[ch])):
 			subel = self.sub_event_lists[ch][i]
-			symbols[subel.get_sym_name(ch, i)] = head_ofs
+			self.symbols[subel.get_sym_name(ch, i)] = head_ofs
 
-			comp_subel = subel.compile(ch, symbols)
+			comp_subel = subel.compile(ch, self.symbols)
 			comp_data.extend(comp_subel)
 			head_ofs += len(comp_subel)
 
-		return (comp_data, symbols)
+		return comp_data
 
 	def compile_header(self, symbols: dict) -> bytearray:
 		comp_data = bytearray()
