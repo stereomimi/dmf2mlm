@@ -104,7 +104,7 @@ class Song:
 
 		self._ch_reorder()
 		if self.notes_below_b2_present:
-			print("[WARNING] SSG NOTES LOWER THAN C2 HAVE BEEN SET TO C2")
+			print("\n[WARNING] SSG NOTES LOWER THAN C2 PRESENT. THEY HAVE BEEN SET TO C2")
 		return self
 
 	def calculate_tma_cnt(frequency: int):
@@ -223,7 +223,7 @@ class Song:
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
 				elif row.note != None and row.octave != None:
-					mlm_note = Song.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
+					mlm_note = self.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
 					if ch_kind == ChannelKind.ADPCMA: mlm_note += sample_bank * 12
 					sub_el.events.append(SongNote(mlm_note))
 
@@ -258,7 +258,7 @@ class Song:
 		YM_VOL_SHIFTS = [3, 1, 4] # ADPCMA, FM, SSG
 		return va << YM_VOL_SHIFTS[ch_kind]
 
-	def dmfnote_to_mlmnote(ch_kind: ChannelKind, note: int, octave: int):
+	def dmfnote_to_mlmnote(self, ch_kind: ChannelKind, note: int, octave: int):
 		if note == 12: # C is be expressed as 12 instead than 0
 			note = 0
 			if isinstance(octave, int): 
