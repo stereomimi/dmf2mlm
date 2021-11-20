@@ -316,7 +316,6 @@ class Song:
 						sym_name = "PJMP:CH{0:01X};{1:03X},{2:03X}".format(i, pjmp_count, jsel_count)
 						if sym_name in self.symbols:
 							pjmp_ofs = self.symbols[sym_name] - song_ofs
-							print(song_ofs, self.symbols[sym_name], pjmp_ofs)
 							comp_data[pjmp_ofs]   = head_ofs & 0xFF
 							comp_data[pjmp_ofs+1] = head_ofs >> 8
 							pjmp_count += 1
@@ -335,7 +334,7 @@ class Song:
 		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
 			raise RuntimeError("Compiled sound data overflow")
 		
-		for s in self.symbols: print(s.ljust(16), "0x{0:04X}".format(self.symbols[s]))
+		#for s in self.symbols: print(s.ljust(16), "0x{0:04X}".format(self.symbols[s]))
 		
 		return comp_data, self.symbols["HEADER"]
 
