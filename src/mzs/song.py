@@ -22,12 +22,11 @@ class EventList:
 		else:
 			return "EL:{0:02X}".format(ch)
 
-	def compile(self, ch: int, symbols: dict) -> bytearray:
+	def ceompile(self, ch: int, symbols: dict, idx: int = 0) -> (bytearray, dict):
 		comp_data = bytearray()
 		for event in self.events:
 			comp_event = event.compile(ch, symbols)
 			comp_data.extend(comp_event)
-			#print(type(event).__name__.ljust(32), list(comp_event))
 
 		return comp_data
 
@@ -298,10 +297,15 @@ class Song:
 				comp_data.extend(comp_subel_data)
 				head_ofs += len(comp_subel_data)
 
+				# Compile EventList
 				self.symbols[self.channels[i].get_sym_name(i)] = head_ofs
-				comp_el_data = self.channels[i].compile(i, self.symbols)
-				comp_data.extend(comp_el_data)
-				head_ofs += len(comp_el_data)
+				comp_el = bytearray()
+				for event in self.channels[i].events:
+					comp_event = event.compile(i, self.symbols)
+					comp_el.extend(comp_event)
+				
+				comp_data.extend(comp_el)
+				head_ofs += len(comp_el)
 		
 		self.symbols["HEADER"] = head_ofs
 		comp_header_data = self.compile_header(self.symbols)
@@ -349,7 +353,12 @@ class Song:
 			subel = self.sub_event_lists[ch][i]
 			self.symbols[subel.get_sym_name(ch, i)] = head_ofs
 
-			comp_subel = subel.compile(ch, self.symbols)
+			# Compile SubEL
+			comp_subel = bytearray()
+			for event in subel.events:
+				comp_event = event.compile(ch, self.symbols)
+				comp_subel.extend(comp_event)
+
 			comp_data.extend(comp_subel)
 			head_ofs += len(comp_subel)
 
