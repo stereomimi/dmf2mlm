@@ -632,6 +632,36 @@ class Module:
 			#print("\n====", _, "====")
 			#print(sample)
 
+	# Take steps to make the DMF module MLM-compatible,
+	# used to make encoding algorithms easier
+	def patch_for_mzs(self):
+		for i in range(SYSTEM_TOTAL_CHANNELS):
+			for j in range(len(self.patterns[i])):
+				self.patch_0B_fx(i, j)
+
+	def patch_0B_fx(self, ch: int, pat_idx: int):
+		"""
+		If there's a $0B (Position Jump) effect, add one
+		to every nonempty channel in the same row
+		|C1 0B02|D4 ----|E2 0400| -> |C1 0B02|D4 0B02|E2 0400 0B02|
+		"""
+		pat = self.patterns[ch][pat_idx]
+		for i in range(len(pat.rows)):
+			for j in range(len(pat.rows[i].effects)):
+				if pat.rows[i].effects[j].code == EffectCode.POS_JUMP:
+					self.apply_0B_fx_patch(ch, pat_idx, i, pat.rows[i].effects[j].value)
+
+	def apply_0B_fx_patch(self, ch: int, pat_idx: int, row_idx: int, fx_val: int):
+		for i in range(SYSTEM_TOTAL_CHANNELS):
+			if i != ch and not self.is_channel_empty(i):
+				row = self.patterns[i][pat_idx].rows[row_idx]
+				chrow_has_0b = False
+				for j in range(len(self.patterns[i][pat_idx].rows[row_idx].effects)):
+					chrow_has_0b |= EffectCode.POS_JUMP == row.effects[j].code
+				if not chrow_has_0b:
+					fx = Effect(EffectCode.POS_JUMP, fx_val)
+					self.patterns[i][pat_idx].rows[row_idx].effects.append(fx)
+
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
 			self.optimize_equal_patterns(ch)
@@ -654,14 +684,23 @@ class Module:
 		If the channel is completely empty, it sets its
 		pattern matrix to None
 		"""
-		unique_patterns = set(self.pattern_matrix.matrix[ch])
-		is_empty = True
+		#unique_patterns = set(self.pattern_matrix.matrix[ch])
+		#is_empty = True
 
+		#for pat_idx in unique_patterns:
+		#	if not self.patterns[ch][pat_idx].is_empty():
+		#		is_empty = False
+		#		break
+		#if is_empty: self.pattern_matrix.matrix[ch] = None
+		if self.is_channel_empty(ch):
+			self.pattern_matrix.matrix[ch] = None
+
+	def is_channel_empty(self, ch: int):
+		unique_patterns = set(self.pattern_matrix.matrix[ch])
 		for pat_idx in unique_patterns:
 			if not self.patterns[ch][pat_idx].is_empty():
-				is_empty = False
-				break
-		if is_empty: self.pattern_matrix.matrix[ch] = None
+				return False
+		return True
 
 def get_channel_kind(channel: int):
 	if channel <= FM_CH4:    return ChannelKind.FM

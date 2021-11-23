@@ -212,22 +212,11 @@ class Song:
 				last_com.timing = ticks_since_last_com
 				ticks_since_last_com = 0
 
+				# Check for sample bank switches before
+				# possibly using samples
 				for effect in row.effects:
 					if effect.code == dmf.EffectCode.SET_SAMPLES_BANK:
 						sample_bank = effect.value
-					else:
-						if effect.value != None:
-							mlm_event = df_fx_to_mlm_event_map[effect.code]
-							sub_el.events.append(mlm_event.from_dffx(effect.value))
-
-				if row.instrument != None and row.instrument != current_instrument and ch_kind != dmf.ChannelKind.ADPCMA:
-					current_instrument = row.instrument
-					sub_el.events.append(SongComChangeInstrument(current_instrument))
-
-				if row.volume != None and row.volume != current_volume:
-					current_volume = row.volume
-					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
-					sub_el.events.append(SongComSetChannelVol(mlm_volume))
 
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
@@ -235,6 +224,22 @@ class Song:
 					mlm_note = self.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
 					if ch_kind == ChannelKind.ADPCMA: mlm_note += sample_bank * 12
 					sub_el.events.append(SongNote(mlm_note))
+
+				if row.volume != None and row.volume != current_volume:
+					current_volume = row.volume
+					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
+					sub_el.events.append(SongComSetChannelVol(mlm_volume))
+
+				if row.instrument != None and row.instrument != current_instrument and ch_kind != dmf.ChannelKind.ADPCMA:
+					current_instrument = row.instrument
+					sub_el.events.append(SongComChangeInstrument(current_instrument))
+
+				# Check all other effects here
+				for effect in row.effects:
+					if effect.code != dmf.EffectCode.SET_SAMPLES_BANK:
+						if effect.value != None:
+							mlm_event = df_fx_to_mlm_event_map[effect.code]
+							sub_el.events.append(mlm_event.from_dffx(effect.value))
 
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base

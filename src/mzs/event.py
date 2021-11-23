@@ -191,6 +191,10 @@ class SongComPositionJump(SongCommand):
 	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray()
 
+		if self.timing > 0:
+			comp_waitcom_data = super(SongComPositionJump, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
 		comp_data.append(0x0B) # Position jump command
 		comp_data.append(0xFF) # temporary, will be replaced later
 		comp_data.append(0xFF) # idem
