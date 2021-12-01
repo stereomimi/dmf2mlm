@@ -759,3 +759,27 @@ def _calculate_ssg_pitch_LUT():
 			SSG_pitch = round(250000 / pitch)
 			LUT.append(SSG_pitch)
 	return LUT
+
+def _convert_fmpitch_to_block(old_pitch: int, new_block: int):
+	"""
+	FNum = 11 * freq * 1048576 / 8000000 / 2^(block-1)
+	thus...
+	k = 294912 / 15625
+	FNum = k * freq / 2^(block-1)
+	freq = 1/k * FNum * 2^(block-1) 
+	"""
+	if new_block < 0 or new_block >= 8: 
+		raise RuntimeError("Invalid block")
+	if pitch < 0 or pitch > 0x7FF:
+		raise RuntimeError("Invalid pitch")
+	K = 294912.0 / 15625.0
+
+	old_block = old_pitch >> 11
+	old_fnum = old_pitch & 0x7FF
+	freq = 1/K * old_fnum * 2**(old_block - 1)
+	new_fnum = K * freq / 2**(new_block - 1)
+
+	if new_fnum < 0 or new_fnum > 0x7FF:
+		raise RuntimeError("Frequency is outside of block range")
+		
+	return new_fnum | (new_block<<11)
