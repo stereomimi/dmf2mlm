@@ -192,7 +192,9 @@ class Song:
 		Here DMF patterns get converted into MLM sub-event lists
 		"""
 		df_fx_to_mlm_event_map = {
-			11: SongComPositionJump
+			1:  SongComPitchUpwardSlide,
+			2:  SongComPitchDownwardSlide,
+			11: SongComPositionJump,
 		}
 
 		sub_el = EventList("sub")

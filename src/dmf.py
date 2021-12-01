@@ -634,10 +634,10 @@ class Module:
 
 	# Take steps to make the DMF module MLM-compatible,
 	# used to make encoding algorithms easier
-	def patch_for_mzs(self):
+	def patch_for_mzs(self, do_patch_pos_jumps):
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			for j in range(len(self.patterns[i])):
-				self.patch_0B_fx(i, j)
+				if do_patch_pos_jumps: self.patch_0B_fx(i, j)
 
 	def patch_0B_fx(self, ch: int, pat_idx: int):
 		"""

@@ -199,15 +199,6 @@ class SongComPositionJump(SongCommand):
 		comp_data.append(0xFF) # temporary, will be replaced later
 		comp_data.append(0xFF) # idem
 		return comp_data
-		
-
-class SongComPortamentoSlide(SongCommand):
-	"""
-	Song Command Portamento Slide
-	------------------------------
-	Still not implemented
-	"""
-	pitch_offset: int
 
 class SongComYM2610PortWriteA(SongCommand):
 	"""
@@ -253,6 +244,60 @@ class SongComReturnFromSubEL(SongCommand):
 			comp_data.extend(comp_waitcom_data)
 
 		comp_data.append(0x20) # Return from SubEL command
+		return comp_data
+
+@dataclass
+class SongComPitchUpwardSlide(SongCommand):
+	"""
+	Song Command Pitch Upward Slide
+	------------------------------
+	Sets Upward Pitch slide
+	"""
+	ofs: int
+
+	def from_dffx(value: int):
+		return SongComPitchUpwardSlide(value)
+
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = bytearray()
+
+		if self.ofs > 0:
+			comp_data.append(0x21) # Pitch upward slide command
+			comp_data.append(self.ofs)
+		else:
+			comp_data.append(0x23) # Reset pitch slide command
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongComPitchUpwardSlide, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
+		return comp_data
+
+@dataclass
+class SongComPitchDownwardSlide(SongCommand):
+	"""
+	Song Command Pitch Downward Slide
+	------------------------------
+	Sets Downward Pitch slide
+	"""
+	ofs: int
+
+	def from_dffx(value: int):
+		return SongComPitchDownwardSlide(value)
+
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = bytearray()
+
+		if self.ofs > 0:
+			comp_data.append(0x22) # Pitch downward slide command
+			comp_data.append(self.ofs)
+		else:
+			comp_data.append(0x23) # Reset pitch slide command
+
+		if self.timing > 0:
+			comp_waitcom_data = super(SongComPitchDownwardSlide, self).compile(ch)
+			comp_data.extend(comp_waitcom_data)
+
 		return comp_data
 
 @dataclass

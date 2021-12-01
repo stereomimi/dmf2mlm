@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description='Convert DMF modules and SFX to an 
 parser.add_argument('dmf_module_paths', type=str, nargs='*', help="The paths to the input DMF files")
 parser.add_argument('--sfx-directory', type=Path, help="Path to folder containing .raw files (Only absolute paths; Must be 18500Hz 16bit mono)")
 parser.add_argument('--sfx-header', type=Path, help="Where to save the generated SFX c header (Only absolute paths)")
-parser.add_argument('--enable-patches', action='store_true', help="Patches module to remove the need to repeat $0B effects for every channel, ONLY WORKS WITH MODULES THAT DON'T REUSE PATTERNS EVER")
+parser.add_argument('--patch-pos-jumps', action='store_true', help="Patches module to remove the need to repeat $0B effects for every channel, ONLY WORKS WITH MODULES THAT DON'T REUSE PATTERNS EVER")
 
 args = parser.parse_args()
 dmf_modules = []
@@ -53,7 +53,7 @@ for i in range(len(args.dmf_module_paths)):
 		print(" OK")
 
 		print(f"Optimizing '{args.dmf_module_paths[i]}'...", end='', flush=True)
-		if args.enable_patches: mod.patch_for_mzs()
+		mod.patch_for_mzs(args.patch_pos_jumps)
 		mod.optimize()
 		print(" OK")
 		dmf_modules.append(mod)
