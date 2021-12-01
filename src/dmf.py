@@ -706,3 +706,56 @@ def get_channel_kind(channel: int):
 	if channel <= FM_CH4:    return ChannelKind.FM
 	elif channel <= SSG_CH3: return ChannelKind.SSG
 	return ChannelKind.ADPCMA
+
+def note_to_pitch(channel: int, note: int, octave: int):
+	"""
+	Converts a note and an octave to a pitch usable by the YM2610.
+	(This uses the same algorithms as the MZS driver)
+	"""
+	kind = get_channel_kind(channel)
+	if note == 12: # C is expressed as 12 instead than 0
+		note = 0
+		if isinstance(octave, int): 
+			octave += 1
+	if kind == ChannelKind.FM:
+		return _note_to_pitch_fm(note, octave)
+	elif kind == ChannelKind.SSG:
+		return _note_to_pitch_ssg(note, octave)
+	else:
+		raise RuntimeError("ADPCM-A channels don't have a pitch")
+
+def _note_to_pitch_fm(note: int, octave: int):
+	pitch_LUT = [
+		# C   C#   D    D#   E    F    F#   G
+		309, 327, 346, 367, 389, 412, 436, 462,
+		# G#  A    A#   B
+ 		490, 519, 550, 583, # 583, 583, 583, 583
+	]
+	return pitch_LUT[note] | ((octave+1) << 11) # --BBBFFF'FFFFFFFF
+
+def _note_to_pitch_ssg(note: int, octave: int):
+	if octave < 2:
+		return 0
+	if not hasattr(_note_to_pitch_ssg, "pitch_LUT"):
+		_note_to_pitch_ssg.pitch_LUT = _calculate_ssg_pitch_LUT()
+	return _note_to_pitch_ssg.pitch_LUT[(octave-2)*12 + note]
+
+def _calculate_ssg_pitch_LUT():
+	"""
+	Calculate LUT from C2 to B7 (for SSG OPNBs)
+	"""
+	number_of_octaves = 6
+	base_pitches = [
+		# C2     C#2    D2     D#2    E2     F2
+		65.41, 69.30, 73.42,  77.78, 82.41,  87.31,
+		# F#2    G2     G#2    A2     A#2    B2
+		92.50, 98.00, 103.83, 110.0, 116.54, 123.47
+	]
+	LUT = []
+
+	for octave in range(1, number_of_octaves+1):
+		for base_pitch in base_pitches:
+			pitch = base_pitch * pow(2,octave)
+			SSG_pitch = round(250000 / pitch)
+			LUT.append(SSG_pitch)
+	return LUT

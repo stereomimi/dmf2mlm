@@ -29,8 +29,8 @@ args = parser.parse_args()
 dmf_modules = []
 sfx_samples = None
 
-if args.enable_patches: 
-	print("MODULE PATCHING ENABLED")
+if args.patch_pos_jumps: 
+	print("POS. JUMP PATCHING ENABLED")
 if args.sfx_directory != None:
 	print("Parsing SFX... ", end='', flush=True)
 	sfx_samples = sfx.SFXSamples(args.sfx_directory)
