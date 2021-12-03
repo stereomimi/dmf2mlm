@@ -208,6 +208,7 @@ class Song:
 
 		for i in range(len(pattern.rows)):
 			row = pattern.rows[i]
+			do_end_pattern = False
 
 			if not row.is_empty():
 				last_com = utils.list_top(sub_el.events)
@@ -237,12 +238,15 @@ class Song:
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				# Check all other effects here
+				
 				for effect in row.effects:
 					if effect.code != dmf.EffectCode.SET_SAMPLES_BANK:
 						if effect.value != None:
 							mlm_event = df_fx_to_mlm_event_map[effect.code]
 							sub_el.events.append(mlm_event.from_dffx(effect.value))
-
+					if effect.code == dmf.EffectCode.POS_JUMP:
+						do_end_pattern = True
+				if do_end_pattern: break
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
 

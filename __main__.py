@@ -53,7 +53,7 @@ for i in range(len(args.dmf_module_paths)):
 		print(" OK")
 
 		print(f"Optimizing '{args.dmf_module_paths[i]}'...", end='', flush=True)
-		mod.patch_for_mzs(args.patch_pos_jumps)
+		#mod.patch_for_mzs(args.patch_pos_jumps)
 		mod.optimize()
 		print(" OK")
 		dmf_modules.append(mod)
