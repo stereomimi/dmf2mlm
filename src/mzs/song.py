@@ -1,3 +1,4 @@
+import itertools
 from .instrument import *
 from .other_data import *
 from .event import *
@@ -312,7 +313,6 @@ class Song:
 
 		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			if self.channels[i] != None:
-				pjmp_count = 0 # Position JuMP command count
 				jsel_count = 0 # Jump to SubEL command count
 
 				comp_subel_data = self.compile_sub_els(i, head_ofs)
@@ -324,12 +324,16 @@ class Song:
 				comp_el = bytearray()
 				for event in self.channels[i].events:
 					if isinstance(event, SongComJumpToSubEL):
-						sym_name = "PJMP:CH{0:01X};{1:03X},{2:03X}".format(i, pjmp_count, jsel_count)
-						if sym_name in self.symbols:
-							pjmp_ofs = self.symbols[sym_name] - song_ofs
-							comp_data[pjmp_ofs]   = head_ofs & 0xFF
-							comp_data[pjmp_ofs+1] = head_ofs >> 8
-							pjmp_count += 1
+						# Set all the addresses of the jumps 
+						# to this Sub EL (Code cleanup needed?)
+						for j in itertools.count(start=0):
+							sym_name = "PJMP:CH{0:01X};{1:03X},{2:03X}".format(i, j, jsel_count)
+							if sym_name in self.symbols:
+								pjmp_ofs = self.symbols[sym_name] - song_ofs
+								comp_data[pjmp_ofs]   = head_ofs & 0xFF
+								comp_data[pjmp_ofs+1] = head_ofs >> 8
+							else:
+								break
 						jsel_count += 1
 					comp_event = event.compile(i, self.symbols)
 					comp_el.extend(comp_event)
