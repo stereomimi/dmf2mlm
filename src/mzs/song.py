@@ -247,13 +247,18 @@ class Song:
 							sub_el.events.append(mlm_event.from_dffx(effect.value))
 					if effect.code == dmf.EffectCode.POS_JUMP:
 						do_end_pattern = True
-				if do_end_pattern: break
+			
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
+			if do_end_pattern: break
 
 		utils.list_top(sub_el.events).timing = ticks_since_last_com
 		
-		sub_el.events.append(SongComReturnFromSubEL())
+		# do_not_end_pattern is enabled by effects that
+		# end the current pattern, in those cases adding
+		# a return command would be useless
+		if not do_end_pattern:
+			sub_el.events.append(SongComReturnFromSubEL())
 		return sub_el
 
 	def _ch_reorder(self):

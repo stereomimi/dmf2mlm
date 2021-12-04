@@ -8,14 +8,13 @@ from typing import Optional
 class SongEvent:
 	timing: int = 0
 
-	def compile(self, ch: int, ticks = None) -> bytearray:
+	def _compile_timing(self, ticks = None) -> bytearray:
 		comp_data = bytearray()
-		if isinstance(ticks, int):
-			t = ticks
-		else:
+		if ticks == None:
 			t = self.timing
+		else:
+			t = ticks
 			
-
 		while (t > 0):
 			if t > 0x10:
 				comp_data.append(0x03)         # Wait byte command
@@ -25,6 +24,10 @@ class SongEvent:
 				comp_data.append(0x10 | ((t-1) & 0x0F)) # Wait nibble command
 				t -= 0x10
 
+		return comp_data
+
+	def compile(self, ch: int, _symbols: dict) -> bytearray:
+		comp_data = self._compile_timing()
 		return comp_data
 
 @dataclass
@@ -38,10 +41,7 @@ class SongNote(SongEvent):
 		comp_data[0] = 0x80 | utils.clamp(t, 0, 0x7F)
 		comp_data[1] = self.note
 		t -= 0x7F
-
-		if t > 0:
-			comp_waitcom_data = super(SongNote, self).compile(ch, t)
-			comp_data.extend(comp_waitcom_data)
+		comp_data.extend(self._compile_timing(t))
 
 		return comp_data
 
@@ -62,10 +62,7 @@ class SongComEOEL(SongCommand):
 	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray()
 
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComEOEL, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
-
+		comp_data.extend(self._compile_timing())
 		comp_data.append(0x00) # End of EL command
 		return comp_data
 
@@ -84,10 +81,7 @@ class SongComNoteOff(SongCommand):
 		comp_data[0] = 0x01     # Note off command
 		comp_data[1] = t & 0xFF
 		t -= 0xFF
-
-		if t > 0:
-			comp_waitcom_data = super(SongComNoteOff, self).compile(ch, t)
-			comp_data.extend(comp_waitcom_data)
+		comp_data.extend(self._compile_timing(t))
 
 		return comp_data
 
@@ -105,10 +99,7 @@ class SongComChangeInstrument(SongCommand):
 
 		comp_data[0] = 0x02            # Change instrument command
 		comp_data[1] = self.instrument
-
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComChangeInstrument, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
+		comp_data.extend(self._compile_timing())
 
 		return comp_data
 
@@ -135,10 +126,7 @@ class SongComSetChannelVol(SongCommand):
 		comp_data = bytearray()
 		comp_data.append(0x05)        # Set channel volume command
 		comp_data.append(self.volume)
-
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComSetChannelVol, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
+		comp_data.extend(self._compile_timing())
 
 		return comp_data
 
@@ -161,10 +149,7 @@ class SongComJumpToSubEL(SongCommand):
 
 	def compile(self, ch: int, symbols: dict) -> bytearray:
 		comp_data = bytearray()
-
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComJumpToSubEL, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
+		comp_data.extend(self._compile_timing())
 
 		sym_name = "SUBEL:CH{0:01X};{1:02X}".format(ch, self.sub_el_idx)
 		sub_el_addr = symbols[sym_name]
@@ -191,10 +176,7 @@ class SongComPositionJump(SongCommand):
 	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray()
 
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComPositionJump, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
-
+		comp_data.extend(self._compile_timing())
 		comp_data.append(0x0B) # Position jump command
 		comp_data.append(0xFF) # temporary, will be replaced later
 		comp_data.append(0xFF) # idem
@@ -239,10 +221,7 @@ class SongComReturnFromSubEL(SongCommand):
 	def compile(self, ch: int, _symbols: dict) -> bytearray:
 		comp_data = bytearray()
 
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComReturnFromSubEL, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
-
+		comp_data.extend(self._compile_timing())
 		comp_data.append(0x20) # Return from SubEL command
 		return comp_data
 
@@ -267,10 +246,7 @@ class SongComPitchUpwardSlide(SongCommand):
 		else:
 			comp_data.append(0x23) # Reset pitch slide command
 
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComPitchUpwardSlide, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
-
+		comp_data.extend(self._compile_timing())
 		return comp_data
 
 @dataclass
@@ -294,10 +270,7 @@ class SongComPitchDownwardSlide(SongCommand):
 		else:
 			comp_data.append(0x23) # Reset pitch slide command
 
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComPitchDownwardSlide, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
-
+		comp_data.extend(self._compile_timing())
 		return comp_data
 
 @dataclass
@@ -324,8 +297,5 @@ class SongComOffsetChannelVol(SongCommand):
 		if self.volume_offset < 0: ofs_nibble |= 8 # Set sign bit to negative
 		comp_data.append(0x30 | ofs_nibble)
 
-		if self.timing > 0:
-			comp_waitcom_data = super(SongComSetChannelVol, self).compile(ch)
-			comp_data.extend(comp_waitcom_data)
-
+		comp_data.extend(self._compile_timing())
 		return comp_data
