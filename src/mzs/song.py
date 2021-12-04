@@ -224,22 +224,21 @@ class Song:
 
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
-				elif row.note != None and row.octave != None:
-					mlm_note = self.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
-					if ch_kind == ChannelKind.ADPCMA: mlm_note += sample_bank * 12
-					sub_el.events.append(SongNote(mlm_note))
 
 				if row.volume != None and row.volume != current_volume:
 					current_volume = row.volume
 					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
 					sub_el.events.append(SongComSetChannelVol(mlm_volume))
-
 				if row.instrument != None and row.instrument != current_instrument and ch_kind != dmf.ChannelKind.ADPCMA:
 					current_instrument = row.instrument
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
+				if row.note != dmf.Note.NOTE_OFF and row.note != None and row.octave != None:
+					mlm_note = self.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
+					if ch_kind == ChannelKind.ADPCMA: mlm_note += sample_bank * 12
+					sub_el.events.append(SongNote(mlm_note))
+
 				# Check all other effects here
-				
 				for effect in row.effects:
 					if effect.code != dmf.EffectCode.SET_SAMPLES_BANK:
 						if effect.value != None:

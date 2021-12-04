@@ -726,12 +726,12 @@ def note_to_pitch(channel: int, note: int, octave: int):
 
 def _note_to_pitch_fm(note: int, octave: int):
 	pitch_LUT = [
-		# C   C#   D    D#   E    F    F#   G
-		309, 327, 346, 367, 389, 412, 436, 462,
-		# G#  A    A#   B
- 		490, 519, 550, 583, # 583, 583, 583, 583
+		#  C     C#     D      D#     E      F      F#     G     
+		0x269, 0x28E, 0x2B5, 0x2DE, 0x30A, 0x338, 0x369, 0x39D,
+		#  G#    A      A#     B
+		0x3D4, 0x40E, 0x44C, 0x48D
 	]
-	return pitch_LUT[note] | ((octave+1) << 11) # --BBBFFF'FFFFFFFF
+	return pitch_LUT[note] | (octave << 11) # --BBBFFF'FFFFFFFF
 
 def _note_to_pitch_ssg(note: int, octave: int):
 	if octave < 2:
