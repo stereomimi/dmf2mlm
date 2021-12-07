@@ -49,6 +49,7 @@ class Song:
 	notes_below_b2_present: bool
 	sub_el_idx_matrix: [[int]] # sub_el_idx_matrix[channel][id]
 	symbols: {}
+	_symbols: {}
 
 	def __init__(self):
 		self.channels = []
@@ -61,6 +62,8 @@ class Song:
 		self.samples = []
 		self.notes_below_b2_present = False
 		self.symbols = {}
+		self._symbols = {} # {sym_name: (def_addr, [ref_addr1, ...])}
+		
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			self.channels.append(EventList())
 			self.sub_event_lists.append([])
@@ -297,6 +300,16 @@ class Song:
 			return (octave-2)*12 + note
 		else: # Channel kind is ADPCMA
 			return note
+
+	def create_symbol(self, sym_name: str, sym_def_addr: int):
+		if sym_name in self._symbols: 
+			raise RuntimeError(f"'{sym_name}' symbol already exists")
+		self._symbols[sym_name] = (sym_def_addr, [])
+
+	def add_reference_to_symbol(self, sym_name: str, ref_addr: int): pass
+		if not sym_name in self._symbols:
+			raise RuntimeError(f"'{sym_name}' symbol doesn't exist")
+		self._symbols[sym_name][1].append(ref_addr)
 
 	def compile(self, head_ofs: int) -> (bytearray, int):
 		"""
