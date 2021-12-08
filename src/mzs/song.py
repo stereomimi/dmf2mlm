@@ -1,10 +1,10 @@
-import itertools
 from .instrument import *
 from .other_data import *
 from .event import *
 from .sample import *
-from .. import dmf
 from ..defs import *
+from ..sym_table import *
+from .. import dmf
 
 class EventList:
 	events: [SongEvent]
@@ -48,8 +48,7 @@ class Song:
 	samples: [(Sample, int, int)] # (sample, start_addr, end_addr)
 	notes_below_b2_present: bool
 	sub_el_idx_matrix: [[int]] # sub_el_idx_matrix[channel][id]
-	symbols: {}
-	_symbols: {}
+	symbols: SymbolTable
 
 	def __init__(self):
 		self.channels = []
@@ -61,8 +60,7 @@ class Song:
 		self.sub_el_idx_matrix = []
 		self.samples = []
 		self.notes_below_b2_present = False
-		self.symbols = {}
-		self._symbols = {} # {sym_name: (def_addr, [ref_addr1, ...])}
+		self.symbols = SymbolTable()
 		
 		for _ in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			self.channels.append(EventList())
@@ -301,74 +299,41 @@ class Song:
 		else: # Channel kind is ADPCMA
 			return note
 
-	def create_symbol(self, sym_name: str, sym_def_addr: int):
-		if sym_name in self._symbols: 
-			raise RuntimeError(f"'{sym_name}' symbol already exists")
-		self._symbols[sym_name] = (sym_def_addr, [])
-
-	def add_reference_to_symbol(self, sym_name: str, ref_addr: int): pass
-		if not sym_name in self._symbols:
-			raise RuntimeError(f"'{sym_name}' symbol doesn't exist")
-		self._symbols[sym_name][1].append(ref_addr)
-
-	def compile(self, head_ofs: int) -> (bytearray, int):
+	def compile(self) -> bytearray:
 		"""
 		Returns the compiled address and the song offset
 		in a tuple, in that order.
 		"""
 		comp_data = bytearray()
-		song_ofs = head_ofs
 
-		comp_odata = self.compile_other_data(head_ofs)
-		comp_data.extend(comp_odata)
-		head_ofs += len(comp_odata)
+		self.symbols.define_sym("HEADER", len(comp_data))
+		comp_header_data = self.compile_header(len(comp_data))
+		comp_data.extend(comp_header_data)
 
-		self.symbols["INSTRUMENTS"] = head_ofs
-		comp_inst_data = self.compile_instruments()
+		self.symbols.define_sym("INSTRUMENTS", len(comp_data))
+		comp_inst_data = self.compile_instruments(len(comp_data))
 		comp_data.extend(comp_inst_data)
-		head_ofs += len(comp_inst_data)
+
+		comp_odata = self.compile_other_data(len(comp_data))
+		comp_data.extend(comp_odata)
 
 		for i in range(dmf.SYSTEM_TOTAL_CHANNELS):
 			if self.channels[i] != None:
-				jsel_count = 0 # Jump to SubEL command count
+				el_sym_name = self.channels[i].get_sym_name(i)
+				jsel_count = 0
 
-				comp_subel_data = self.compile_sub_els(i, head_ofs)
-				comp_data.extend(comp_subel_data)
-				head_ofs += len(comp_subel_data)
-
-				# Compile EventList
-				self.symbols[self.channels[i].get_sym_name(i)] = head_ofs
-				comp_el = bytearray()
+				self.symbols.define_sym(el_sym_name, len(comp_data))
 				for event in self.channels[i].events:
 					if isinstance(event, SongComJumpToSubEL):
-						# Set all the addresses of the jumps 
-						# to this Sub EL (Code cleanup needed?)
-						for j in itertools.count(start=0):
-							sym_name = "PJMP:CH{0:01X};{1:03X},{2:03X}".format(i, j, jsel_count)
-							if sym_name in self.symbols:
-								pjmp_ofs = self.symbols[sym_name] - song_ofs
-								comp_data[pjmp_ofs]   = head_ofs & 0xFF
-								comp_data[pjmp_ofs+1] = head_ofs >> 8
-							else:
-								break
+						sym_name = "JSEL:CH{0:01X};{1:02X}".format(i, jsel_count)
+						self.symbols.define_sym(sym_name, len(comp_data))
 						jsel_count += 1
-					comp_event = event.compile(i, self.symbols)
-					comp_el.extend(comp_event)
-					head_ofs += len(comp_event)
-				
-				comp_data.extend(comp_el)
-		
-		self.symbols["HEADER"] = head_ofs
-		comp_header_data = self.compile_header(self.symbols)
-		comp_data.extend(comp_header_data)
-		head_ofs += len(comp_header_data)
+					comp_data.extend(event.compile(i, self.symbols, len(comp_data)))
 
-		if head_ofs >= M1ROM_SDATA_MAX_SIZE:
-			raise RuntimeError("Compiled sound data overflow")
+				comp_subel_data = self.compile_sub_els(i, len(comp_data))
+				comp_data.extend(comp_subel_data)
 		
-		#for s in self.symbols: print(s.ljust(16), "0x{0:04X}".format(self.symbols[s]))
-		
-		return comp_data, self.symbols["HEADER"]
+		return comp_data
 
 	def compile_other_data(self, head_ofs: int) -> (bytearray, dict):
 		"""
@@ -377,7 +342,8 @@ class Song:
 		comp_data = bytearray()
 
 		for i in range(len(self.other_data)):
-			self.symbols[OtherDataIndex(i).get_sym_name()] = head_ofs
+			sym_name = OtherDataIndex(i).get_sym_name()
+			self.symbols.define_sym(sym_name, head_ofs)
 
 			comp_odata = self.other_data[i].compile()
 			comp_data.extend(comp_odata)
@@ -385,11 +351,11 @@ class Song:
 
 		return comp_data
 
-	def compile_instruments(self) -> bytearray:
+	def compile_instruments(self, head_ofs: int) -> bytearray:
 		comp_data = bytearray()
 
 		for inst in self.instruments:
-			inst_data = inst.compile(self.symbols)
+			inst_data = inst.compile(self.symbols, head_ofs + len(comp_data))
 			comp_data.extend(inst_data)
 
 		return comp_data
@@ -403,25 +369,17 @@ class Song:
 
 		for i in range(len(self.sub_event_lists[ch])):
 			subel = self.sub_event_lists[ch][i]
-			self.symbols[subel.get_sym_name(ch, i)] = head_ofs
+			sym_name = subel.get_sym_name(ch, i)
+			self.symbols.define_sym(sym_name, head_ofs + len(comp_data))
 
 			# Compile SubEL
-			comp_subel = bytearray()
 			for event in subel.events:
-				comp_event = event.compile(ch, self.symbols)
-				comp_subel.extend(comp_event)
-				if isinstance(event, SongComPositionJump):
-					sym_name = "PJMP:CH{0:01X};{1:03X},{2:03X}".format(ch, pos_jump_count, event.jsel_idx)
-					pjmp_ofs = head_ofs + len(comp_event) - 2 # Get the jump address, which is always in last two bytes
-					self.symbols[sym_name] = pjmp_ofs
-					pos_jump_count += 1
-				head_ofs += len(comp_event)
-
-			comp_data.extend(comp_subel)
+				comp_event = event.compile(ch, self.symbols, head_ofs + len(comp_data))
+				comp_data.extend(comp_event)
 
 		return comp_data
 
-	def compile_header(self, symbols: dict) -> bytearray:
+	def compile_header(self, head_ofs: int) -> bytearray:
 		comp_data = bytearray()
 
 		for i in range(len(self.channels)):
@@ -429,14 +387,26 @@ class Song:
 				comp_data.append(0x00) # LSB
 				comp_data.append(0x00) # MSB
 			else:
-				channel_ofs = symbols[self.channels[i].get_sym_name(i)]
-				comp_data.append(channel_ofs & 0xFF) # LSB
-				comp_data.append(channel_ofs >> 8)   # MSB
+				sym_name = self.channels[i].get_sym_name(i)
+				self.symbols.add_sym_ref(sym_name, head_ofs + len(comp_data))
+				comp_data.append(0xFF) # LSB (Placeholder)
+				comp_data.append(0xFF) # MSB (Placeholder)
 
-		comp_data.append(self.tma_counter & 0xFF)       # TMA LSB
-		comp_data.append(self.tma_counter >> 8)         # TMA MSB
-		comp_data.append(self.time_base)                # Base time
-		comp_data.append(symbols["INSTRUMENTS"] & 0xFF) # Inst. LSB
-		comp_data.append(symbols["INSTRUMENTS"] >> 8)   # Inst. MSB
+		comp_data.append(self.tma_counter & 0xFF) # TMA LSB
+		comp_data.append(self.tma_counter >> 8)   # TMA MSB
+		comp_data.append(self.time_base)          # Base time
+
+		self.symbols.add_sym_ref("INSTRUMENTS", head_ofs + len(comp_data))
+		comp_data.append(0xFF) # Inst. LSB (Placeholder)
+		comp_data.append(0xFF) # Inst. MSB (Placeholder)
 
 		return comp_data
+
+	def replace_symbols(self, comp_song: bytearray, def_addr_ofs = 0) -> bytearray:
+		for sym_name, addrs in self.symbols.items():
+			for ref_addr in addrs[1]:
+				offset_def_addr = addrs[0] + def_addr_ofs
+				comp_song[ref_addr]   = offset_def_addr & 0xFF
+				comp_song[ref_addr+1] = offset_def_addr >> 8
+				#print(ref_addr, addrs[0], offset_def_addr)
+		return comp_song

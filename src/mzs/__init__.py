@@ -65,11 +65,32 @@ class SoundData:
 		smp_list = SampleList(sfx_addrs).compile()
 		comp_sdata.extend(smp_list)
 
+		comp_songs = []
 		for i in range(len(self.songs)):
-			comp_song, song_ofs = self.songs[i].compile(len(comp_sdata))
-			comp_sdata[3 + i*2]     = song_ofs & 0xFF
-			comp_sdata[3 + i*2 + 1] = song_ofs >> 8
-			comp_sdata.extend(comp_song)
+			comp_songs.append(self.songs[i].compile())
+
+		FBANK_SIZE = 0x4000 # The size of the fixed bank used for data
+		SBANK_SIZE = 0x7800 # The size of switchable bank windows 0, 1, 2 and 3
+		WRAM_PAD   = 0x800  # Padding inbetween banks
+		bank = 0
+		for i in range(len(self.songs)):
+			csong = comp_songs[i]
+			max_csong_size = SBANK_SIZE
+			if bank == 0: max_csong_size += FBANK_SIZE - header_size
+			if len(csong) > max_csong_size:
+				raise RuntimeError(f"Song n°{i+1} is too big (>{max_csong_size}, bank {bank})")
+			
+			bank_limit = FBANK_SIZE + SBANK_SIZE*(bank+1)
+			if len(comp_sdata) + len(csong) > bank_limit:
+				next_bank_ofs = bank_limit + WRAM_PAD*bank
+				pad = bytearray(next_bank_ofs - (len(comp_sdata) + len(csong)))
+				comp_sdata.extend(pad)
+				bank += 1
+
+			comp_sdata[3 + i*2]     = len(comp_sdata) & 0xFF
+			comp_sdata[3 + i*2 + 1] = len(comp_sdata) >> 8
+			csong = self.songs[i].replace_symbols(csong, len(comp_sdata))
+			comp_sdata.extend(csong)
 		
 		return comp_sdata
 

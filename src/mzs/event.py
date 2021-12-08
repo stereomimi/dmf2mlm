@@ -1,4 +1,6 @@
+import itertools
 from ..defs import *
+from ..sym_table import *
 from .. import utils
 from dataclasses import dataclass
 from typing import Optional
@@ -26,7 +28,7 @@ class SongEvent:
 
 		return comp_data
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = self._compile_timing()
 		return comp_data
 
@@ -34,7 +36,7 @@ class SongEvent:
 class SongNote(SongEvent):
 	note: int # Can also be a sample id in ADPCM channels
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray(2)
 		t = self.timing
 
@@ -59,7 +61,7 @@ class SongComEOEL(SongCommand):
 	ends the playback for the current channel
 	"""
 	
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
 
 		comp_data.extend(self._compile_timing())
@@ -74,7 +76,7 @@ class SongComNoteOff(SongCommand):
 	Stops the channel's playing note/sample
 	"""
 	
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray(2)
 		t = self.timing
 
@@ -94,7 +96,7 @@ class SongComChangeInstrument(SongCommand):
 	"""
 	instrument: int
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray(2)
 
 		comp_data[0] = 0x02            # Change instrument command
@@ -122,7 +124,7 @@ class SongComSetChannelVol(SongCommand):
 	"""
 	volume: int
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
 		comp_data.append(0x05)        # Set channel volume command
 		comp_data.append(self.volume)
@@ -147,15 +149,15 @@ class SongComJumpToSubEL(SongCommand):
 	"""
 	sub_el_idx: int # index to Song.sub_event_lists
 
-	def compile(self, ch: int, symbols: dict) -> bytearray:
+	def compile(self, ch: int, symbols: SymbolTable, head_ofs: int) -> bytearray:
 		comp_data = bytearray()
 		comp_data.extend(self._compile_timing())
+		comp_data.append(0x09) # Jump to SubEL command
 
 		sym_name = "SUBEL:CH{0:01X};{1:02X}".format(ch, self.sub_el_idx)
-		sub_el_addr = symbols[sym_name]
-		comp_data.append(0x09)               # Jump to SubEL command
-		comp_data.append(sub_el_addr & 0xFF) # SubEL addr LSB
-		comp_data.append(sub_el_addr >> 8)   # SubEL addr MSB
+		symbols.add_sym_ref(sym_name, head_ofs + len(comp_data))
+		comp_data.append(0xFF) # SubEL addr LSB (Placeholder)
+		comp_data.append(0xFF) # SubEL addr MSB (Placeholder)
 		return comp_data
 
 @dataclass
@@ -173,13 +175,15 @@ class SongComPositionJump(SongCommand):
 	def from_dffx(value: int):
 		return SongComPositionJump(value)
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, symbols: SymbolTable, head_ofs: int) -> bytearray:
 		comp_data = bytearray()
-
 		comp_data.extend(self._compile_timing())
 		comp_data.append(0x0B) # Position jump command
-		comp_data.append(0xFF) # temporary, will be replaced later
-		comp_data.append(0xFF) # idem
+		
+		sym_name = "JSEL:CH{0:01X};{1:02X}".format(ch, self.jsel_idx)
+		symbols.add_sym_ref(sym_name, head_ofs + len(comp_data))
+		comp_data.append(0xFF) # Dest. Addr LSB (Placeholder)
+		comp_data.append(0xFF) # Dest. Addr MSB (Placeholder)
 		return comp_data
 
 class SongComYM2610PortWriteA(SongCommand):
@@ -218,7 +222,7 @@ class SongComReturnFromSubEL(SongCommand):
 	Returns from Sub event list
 	"""
 	
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
 
 		comp_data.extend(self._compile_timing())
@@ -237,7 +241,7 @@ class SongComPitchUpwardSlide(SongCommand):
 	def from_dffx(value: int):
 		return SongComPitchUpwardSlide(value)
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
 
 		if self.ofs > 0:
@@ -261,7 +265,7 @@ class SongComPitchDownwardSlide(SongCommand):
 	def from_dffx(value: int):
 		return SongComPitchDownwardSlide(value)
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
 
 		if self.ofs > 0:
@@ -284,7 +288,7 @@ class SongComOffsetChannelVol(SongCommand):
 	"""
 	volume_offset: int
 
-	def compile(self, ch: int, _symbols: dict) -> bytearray:
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
 		
 		vol_shift_offsets = [

@@ -3,6 +3,7 @@ from enum import Enum, IntEnum
 from typing import Optional
 from .. import dmf, utils
 from ..defs import *
+from ..sym_table import *
 
 class Instrument:
 	pass
@@ -14,12 +15,13 @@ class ADPCMAInstrument(Instrument):
 		if sample_list != None:
 			self.sample_list = OtherDataIndex(sample_list)
 
-	def compile(self, symbols: dict) -> bytearray:
+	def compile(self, symbols: SymbolTable, head_ofs: int) -> bytearray:
 		comp_data = bytearray(MLM_INSTRUMENT_SIZE)
-		smp_list_addr = symbols[self.sample_list.get_sym_name()]
+		sym_name = self.sample_list.get_sym_name()
+		symbols.add_sym_ref(sym_name, head_ofs)
 
-		comp_data[0] = smp_list_addr & 0xFF
-		comp_data[1] = smp_list_addr >> 8
+		comp_data[0] = 0xFF # Placeholder
+		comp_data[1] = 0xFF # Placeholder
 		return comp_data
 
 class FMOperator:
@@ -76,7 +78,7 @@ class FMInstrument(Instrument):
 			self.operators.append(FMOperator.from_dmf_op(dop))
 		return self
 
-	def compile(self, symbols: dict) -> bytearray:
+	def compile(self, _symbols: SymbolTable, _head_ofs: int) -> bytearray:
 		comp_data = bytearray(3) # FBALGO, AMSPMS, OP ENABLE
 		comp_data[0] = self.fbalgo
 		comp_data[1] = self.amspms
@@ -140,7 +142,7 @@ class SSGInstrument(Instrument):
 			return SSGMixing.TONE
 		return SSGMixing(dinst.chmode_macro.envelope_values[0]+1)
 
-	def compile(self, symbols: dict) -> bytearray:
+	def compile(self, symbols: SymbolTable, head_ofs: int) -> bytearray:
 		comp_data = bytearray(MLM_INSTRUMENT_SIZE)
 		comp_data[0] = int(self.mixing)
 		comp_data[1] = 0 # EG Enable
@@ -151,8 +153,9 @@ class SSGInstrument(Instrument):
 				comp_data[5 + i*2]     = 0x00 # Macro ptr LSB (NULL)
 				comp_data[5 + i*2 + 1] = 0x00 # Macro ptr MSB (NULL)
 			else:
-				macro_ptr = symbols[macros[i].get_sym_name()]
-				comp_data[5 + i*2]     = macro_ptr & 0xFF # Macro ptr LSB 
-				comp_data[5 + i*2 + 1] = macro_ptr >> 8   # Macro ptr MSB
+				sym_name = macros[i].get_sym_name()
+				symbols.add_sym_ref(sym_name, head_ofs + 5 + i*2)
+				comp_data[5 + i*2]     = 0xFF # Macro ptr LSB (Placeholder)
+				comp_data[5 + i*2 + 1] = 0xFF # Macro ptr MSB (Placeholder)
 		
 		return comp_data
