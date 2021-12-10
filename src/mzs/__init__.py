@@ -52,7 +52,7 @@ class SoundData:
 
 
 	def compile_sdata(self) -> bytearray:
-		header_size = len(self.songs) * 2 + 3
+		header_size = len(self.songs) * 4 + 3
 		comp_sdata = bytearray(header_size)
 
 		# The SFX Sample list will be located immediately 
@@ -87,8 +87,9 @@ class SoundData:
 				comp_sdata.extend(pad)
 				bank += 1
 
-			comp_sdata[3 + i*2]     = len(comp_sdata) & 0xFF
-			comp_sdata[3 + i*2 + 1] = len(comp_sdata) >> 8
+			comp_sdata[3 + i*4]     = bank
+			comp_sdata[3 + i*4 + 1] = len(comp_sdata) & 0xFF
+			comp_sdata[3 + i*4 + 2] = len(comp_sdata) >> 8
 			csong = self.songs[i].replace_symbols(csong, len(comp_sdata))
 			comp_sdata.extend(csong)
 		
