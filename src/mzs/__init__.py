@@ -69,7 +69,7 @@ class SoundData:
 		for i in range(len(self.songs)):
 			comp_songs.append(self.songs[i].compile())
 
-		FBANK_SIZE = 0x4000 # The size of the fixed bank used for data
+		FBANK_SIZE = 0x2000 # The size of the fixed bank used for data
 		SBANK_SIZE = 0x7800 # The size of switchable bank windows 0, 1, 2 and 3
 		WRAM_PAD   = 0x800  # Padding inbetween banks
 		bank = 0
