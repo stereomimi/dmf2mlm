@@ -244,26 +244,35 @@ class PatternRow:
 	effects: [Effect]
 	instrument: Optional[int] 
 
-	def __init__(self, data: bytes, effect_count: int):
-		self.note = Note(data[0] | (data[1] << 8))
-		self.octave = data[2] | (data[3] << 8)
-		self.volume = data[4] | (data[5] << 8)
+	def __init__(self):
+		self.note       = None
+		self.octave     = None
+		self.volume     = None
+		self.effects    = []
+		self.instrument = None
+		
+
+	def from_data(data: bytes, effect_count: int):
+		row = PatternRow()
+		row.note = Note(data[0] | (data[1] << 8))
+		row.octave = data[2] | (data[3] << 8)
+		row.volume = data[4] | (data[5] << 8)
 		head_ofs = 6
 
-		self.effects = []
 		for i in range(effect_count):
 			code = EffectCode(data[head_ofs] | (data[head_ofs+1] << 8))
 			value = data[head_ofs+2] | (data[head_ofs+3] << 8)
-			self.effects.append(Effect(code, value))
+			row.effects.append(Effect(code, value))
 			head_ofs += 4
 			
-		self.instrument = data[head_ofs] | (data[head_ofs+1] << 8)
+		row.instrument = data[head_ofs] | (data[head_ofs+1] << 8)
+		if row.note == Note.EMPTY and row.octave == 0:
+			row.note = None
+			row.octave = None
+		if row.volume == 0xFFFF: row.volume = None
+		if row.instrument == 0xFFFF: row.instrument = None
 
-		if self.note == Note.EMPTY and self.octave == 0:
-			self.note = None
-			self.octave = None
-		if self.volume == 0xFFFF: self.volume = None
-		if self.instrument == 0xFFFF: self.instrument = None
+		return row
 
 	def is_empty(self):
 		is_empty = (self.note == None) & (self.octave == None)
@@ -300,13 +309,18 @@ class PatternRow:
 class Pattern:
 	rows: [PatternRow]
 
-	def __init__(self, data: bytes, rows_per_pattern: int, effect_count: int):
-		head_ofs = 0
+	def __init__(self):
 		self.rows = []
 
+	def from_data(data: bytes, rows_per_pattern: int, effect_count: int):
+		pat = Pattern()
+		head_ofs = 0
+
 		for i in range(rows_per_pattern):
-			self.rows.append(PatternRow(data[head_ofs:], effect_count))
+			pat.rows.append(PatternRow.from_data(data[head_ofs:], effect_count))
 			head_ofs += BASE_ROW_SIZE + EFFECT_SIZE*effect_count
+		
+		return pat
 
 	def __hash__(self):
 		row_data = []
@@ -614,7 +628,7 @@ class Module:
 			self.head_ofs += 1
 
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
-				pattern = Pattern(self.data[self.head_ofs:], self.pattern_matrix.rows_per_pattern, effect_count)
+				pattern = Pattern.from_data(self.data[self.head_ofs:], self.pattern_matrix.rows_per_pattern, effect_count)
 				channel_patterns.append(pattern)
 				self.head_ofs += self.pattern_matrix.rows_per_pattern * (BASE_ROW_SIZE + EFFECT_SIZE*effect_count)
 			self.patterns.append(channel_patterns)
@@ -638,6 +652,31 @@ class Module:
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			for j in range(len(self.patterns[i])):
 				if do_patch_pos_jumps: self.patch_0B_fx(i, j)
+				self.patch_extend_pattern(i, j)
+		self.time_info.tick_time_base = 1
+		self.time_info.tick_time_1 = 1
+		self.time_info.tick_time_2 = 1
+
+	def patch_extend_pattern(self, ch: int, pat_idx: int):
+		"""
+		Extends the pattern as much as possible.
+		|C1 |C2 |D3#|                 (base speed: 2, speed A: 2, speed B: 1) becomes..
+		|C1 |---|---|---|C2 |---|D3#| (base speed: 1, speed A: 1, speed B: 1)
+		DOESN'T SET SPEEDS. That should be done after extending all patterns.
+		"""
+		old_pat = self.patterns[ch][pat_idx]
+		extended_pat = Pattern()
+		empty_row = PatternRow()
+		speed1 = self.time_info.tick_time_1 * self.time_info.time_base
+		speed2 = self.time_info.tick_time_2 * self.time_info.time_base
+
+		for i in range(len(old_pat.rows)):
+			extended_pat.rows.append(old_pat.rows[i])
+			if i%2 == 0:
+				extended_pat.rows.extend([empty_row] * (speed1-1))
+			else:
+				extended_pat.rows.extend([empty_row] * (speed2-1))
+		self.patterns[ch][pat_idx] = extended_pat
 
 	def patch_0B_fx(self, ch: int, pat_idx: int):
 		"""
