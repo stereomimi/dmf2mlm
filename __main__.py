@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 
 def print_info(mlm_sdata):
+	if len(mlm_sdata.songs) <= 0: return
 	for i in range(len(mlm_sdata.songs[0].channels)):
 		channel = mlm_sdata.songs[0].channels[i]
 		print("\n================[ {0:01X} ]================".format(i))
