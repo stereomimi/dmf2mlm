@@ -4,6 +4,7 @@ from enum import Enum, IntEnum
 from dataclasses import dataclass
 from typing import Optional
 from itertools import groupby
+from copy import deepcopy
 import zlib
 from .utils import *
 from .defs import *
@@ -355,7 +356,7 @@ class PatternMatrix:
 	def __init__(self):
 		self.rows_per_pattern = 0
 		self.rows_in_pattern_matrix = 0
-		self.matrix = []
+		self.matrix = [] # pattern_matrix[channel][row]
 
 ######################## SAMPLE ########################
 
@@ -514,7 +515,6 @@ class Module:
 
 	# Module information
 	time_info: TimeInfo
-
 	pattern_matrix: PatternMatrix
 
 	# Instruments data
@@ -648,20 +648,32 @@ class Module:
 
 	# Take steps to make the DMF module MLM-compatible,
 	# used to make encoding algorithms easier
-	def patch_for_mzs(self, do_patch_pos_jumps):
+	def patch_for_mzs(self):
 		for i in range(SYSTEM_TOTAL_CHANNELS):
+			self.patch_unoptimize_pat_matrix(i)
 			for j in range(len(self.patterns[i])):
-				if do_patch_pos_jumps: self.patch_0B_fx(i, j)
-				self.patch_extend_pattern(i, j)
+				pass
+				#self.patch_extend_pattern(i, j)
+				#self.patch_0B_fx(i, j)
 		self.time_info.tick_time_base = 1
 		self.time_info.tick_time_1 = 1
 		self.time_info.tick_time_2 = 1
 
+
+	def patch_unoptimize_pat_matrix(self, ch: int):
+		"""
+		Eliminates pattern repetition, this makes other patches much easier.
+		Pattern usage is optimized again afterwards, no space is wasted.
+		This works because the .DMF format repeats patterns regardless.
+		"""
+		for i in range(self.pattern_matrix.rows_in_pattern_matrix):
+			self.pattern_matrix.matrix[ch][i] = i
+
 	def patch_extend_pattern(self, ch: int, pat_idx: int):
 		"""
 		Extends the pattern as much as possible.
-		|C1 |C2 |D3#|                 (base speed: 2, speed A: 2, speed B: 1) becomes..
-		|C1 |---|---|---|C2 |---|D3#| (base speed: 1, speed A: 1, speed B: 1)
+		|C1 |C2 |D3#|                 (bspd: 2, spdA: 2, spdB: 1)
+		|C1 |---|---|---|C2 |---|D3#| (bspd: 1, spdA: 1, spdB: 1)
 		DOESN'T SET SPEEDS. That should be done after extending all patterns.
 		"""
 		old_pat = self.patterns[ch][pat_idx]
@@ -677,7 +689,8 @@ class Module:
 			else:
 				extended_pat.rows.extend([empty_row] * (speed2-1))
 		self.patterns[ch][pat_idx] = extended_pat
-
+		self.pattern_matrix.rows_per_pattern = len(extended_pat.rows)
+		
 	def patch_0B_fx(self, ch: int, pat_idx: int):
 		"""
 		If there's a $0B (Position Jump) effect, add one

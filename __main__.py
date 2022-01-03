@@ -13,25 +13,66 @@ def print_info(mlm_sdata):
 			continue
 
 		for event in channel.events:
+			print(event)
 			if isinstance(event, mzs.SongComJumpToSubEL):
 				sub_el = mlm_sdata.songs[0].sub_event_lists[i][event.sub_el_idx]
 				sub_el.print()
 				print("\t--------")
-			else:
-				print(event)
+				
+def print_df_info(mod, channels: [int]):
+	for ch in channels:
+		print("|####[${0:02X}]####".format(ch), end='')
+	print("|")
+
+	for i in range(mod.pattern_matrix.rows_in_pattern_matrix):
+		for ch in channels:
+			subel_idx = mod.pattern_matrix.matrix[ch][i]
+			print("|====(${0:02X})====".format(subel_idx), end='')
+		print("|")
+
+		for j in range(mod.pattern_matrix.rows_per_pattern):
+			for ch in channels:
+				row = mod.patterns[ch][i].rows[j]
+				note_lbl = "--"
+				oct_lbl  = "-"
+				vol_lbl  = "--"
+				inst_lbl = "--"
+				fx0_lbl  = "----"
+				if row.octave != None:
+					oct_lbl = str(row.octave)
+				if row.note == dmf.Note.NOTE_OFF:
+					note_lbl = "~~"
+					oct_lbl  = "~"
+				elif row.note != None:
+					note_lbl = row.note.name.ljust(2, '-').replace('S', '#')
+				if row.volume != None:
+					vol_lbl = "{:02X}".format(row.volume)
+				if row.instrument != None:
+					inst_lbl = "{:02X}".format(row.instrument)
+				if len(row.effects) > 0:
+					fx0 = row.effects[0]
+					if fx0.code == dmf.EffectCode.EMPTY:
+						fx0_lbl = "--"
+					else:
+						fx0_lbl = "{:02X}".format(fx0.code.value)
+					if fx0.value == None:
+						fx0_lbl += "--"
+					else:
+						fx0_lbl += "{:02X}".format(fx0.value)
+				print("|{0}{1} {2}{3} {4}".format(note_lbl, oct_lbl, vol_lbl, inst_lbl, fx0_lbl), end='')
+			print("|")
+
+		
 
 parser = argparse.ArgumentParser(description='Convert DMF modules and SFX to an MLM driver compatible format')
 parser.add_argument('dmf_module_paths', type=str, nargs='*', help="The paths to the input DMF files")
 parser.add_argument('--sfx-directory', type=Path, help="Path to folder containing .raw files (Only absolute paths; Must be 18500Hz 16bit mono)")
 parser.add_argument('--sfx-header', type=Path, help="Where to save the generated SFX c header (Only absolute paths)")
-parser.add_argument('--patch-pos-jumps', action='store_true', help="Patches module to remove the need to repeat $0B effects for every channel, ONLY WORKS WITH MODULES THAT DON'T REUSE PATTERNS EVER")
 
 args = parser.parse_args()
 dmf_modules = []
 sfx_samples = None
 
-if args.patch_pos_jumps: 
-	print("POS. JUMP PATCHING ENABLED")
 if args.sfx_directory != None:
 	print("Parsing SFX... ", end='', flush=True)
 	sfx_samples = sfx.SFXSamples(args.sfx_directory)
@@ -54,7 +95,7 @@ for i in range(len(args.dmf_module_paths)):
 		print(" OK")
 
 		print(f"Optimizing '{args.dmf_module_paths[i]}'...", end='', flush=True)
-		#mod.patch_for_mzs(args.patch_pos_jumps)
+		mod.patch_for_mzs()
 		mod.optimize()
 		print(" OK")
 		dmf_modules.append(mod)
@@ -69,7 +110,8 @@ if sfx_samples != None:
 	mlm_sdata.add_sfx(sfx_samples, False)
 	print(" OK")
 
-print_info(mlm_sdata)
+print_df_info(dmf_modules[0], [0, 4, 7])
+#print_info(mlm_sdata)
 
 print(f"Compiling...", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()
