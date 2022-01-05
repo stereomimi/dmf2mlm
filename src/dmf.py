@@ -263,7 +263,8 @@ class PatternRow:
 		for i in range(effect_count):
 			code = EffectCode(data[head_ofs] | (data[head_ofs+1] << 8))
 			value = data[head_ofs+2] | (data[head_ofs+3] << 8)
-			row.effects.append(Effect(code, value))
+			if code != EffectCode.EMPTY:
+				row.effects.append(Effect(code, value))
 			head_ofs += 4
 			
 		row.instrument = data[head_ofs] | (data[head_ofs+1] << 8)
@@ -654,7 +655,9 @@ class Module:
 			for j in range(len(self.patterns[i])):
 				pass
 				#self.patch_extend_pattern(i, j)
-				#self.patch_0B_fx(i, j)
+
+			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
+				self.patch_0B_fx(i, j)
 		self.time_info.tick_time_base = 1
 		self.time_info.tick_time_1 = 1
 		self.time_info.tick_time_2 = 1
@@ -691,25 +694,30 @@ class Module:
 		self.patterns[ch][pat_idx] = extended_pat
 		self.pattern_matrix.rows_per_pattern = len(extended_pat.rows)
 		
-	def patch_0B_fx(self, ch: int, pat_idx: int):
+	def patch_0B_fx(self, ch: int, patmat_row: int):
 		"""
 		If there's a $0B (Position Jump) effect, add one
 		to every nonempty channel in the same row
 		|C1 0B02|D4 ----|E2 0400| -> |C1 0B02|D4 0B02|E2 0400 0B02|
 		"""
+		pat_idx = self.pattern_matrix.matrix[ch][patmat_row]
 		pat = self.patterns[ch][pat_idx]
 		for i in range(len(pat.rows)):
 			for j in range(len(pat.rows[i].effects)):
 				if pat.rows[i].effects[j].code == EffectCode.POS_JUMP:
-					self.apply_0B_fx_patch(ch, pat_idx, i, pat.rows[i].effects[j].value)
+					self.apply_0B_fx_patch(patmat_row, i, pat.rows[i].effects[j].value)
 
-	def apply_0B_fx_patch(self, ch: int, pat_idx: int, row_idx: int, fx_val: int):
+	def apply_0B_fx_patch(self, patmat_row: int, row_idx: int, fx_val: int):
 		for i in range(SYSTEM_TOTAL_CHANNELS):
-			if i != ch and not self.is_channel_empty(i):
+			if not self.is_channel_empty(i):
+				pat_idx = self.pattern_matrix.matrix[i][patmat_row]
 				row = self.patterns[i][pat_idx].rows[row_idx]
 				chrow_has_0b = False
 				for j in range(len(self.patterns[i][pat_idx].rows[row_idx].effects)):
-					chrow_has_0b |= EffectCode.POS_JUMP == row.effects[j].code
+					if row.effects[j].code == EffectCode.POS_JUMP:
+						chrow_has_0b = True
+						if row.effects[j].value != fx_val:
+							raise RuntimeError(f"Clashing $0B effect at ch {i}, matrix row {patmat_row}, row {row_idx}")
 				if not chrow_has_0b:
 					fx = Effect(EffectCode.POS_JUMP, fx_val)
 					self.patterns[i][pat_idx].rows[row_idx].effects.append(fx)
