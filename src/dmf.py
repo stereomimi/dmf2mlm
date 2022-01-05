@@ -739,7 +739,6 @@ class Module:
 			merged_pat_idx = eq_pats[0][1]
 			new_pattern_list.append(self.patterns[ch][merged_pat_idx])
 			for pat, idx in eq_pats:
-				print(idx, end=', ')
 				self.pattern_matrix.matrix[ch][idx] = len(new_pattern_list)-1
 		
 		self.patterns[ch] = new_pattern_list
