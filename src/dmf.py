@@ -653,8 +653,7 @@ class Module:
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			self.patch_unoptimize_pat_matrix(i)
 			for j in range(len(self.patterns[i])):
-				pass
-				#self.patch_extend_pattern(i, j)
+				self.patch_extend_pattern(i, j)
 
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
 				self.patch_0B_fx(i, j)
@@ -681,24 +680,47 @@ class Module:
 		"""
 		old_pat = self.patterns[ch][pat_idx]
 		extended_pat = Pattern()
-		empty_row = PatternRow()
 		speed1 = self.time_info.tick_time_1 * self.time_info.time_base
 		speed2 = self.time_info.tick_time_2 * self.time_info.time_base
 
 		for i in range(len(old_pat.rows)):
-			extended_pat.rows.append(old_pat.rows[i])
-			if i%2 == 0:
-				extended_pat.rows.extend([empty_row] * (speed1-1))
+			row = old_pat.rows[i]
+			end_of_row_fx_idxs = []
+			end_of_row_fxs = []
+
+			# Some pattern are executed at the *end* of a tick, not
+			# the start. Those need to be appropiately dealt with.
+			#   Find all the indexes of said effects.
+			for i in range(len(row.effects)):
+				fx = row.effects[i]
+				if fx.code == EffectCode.POS_JUMP:
+					end_of_row_fx_idxs.append(i)
+
+			# Reverse the index list as to not have to deal with
+			# needed element indexes changing. Pop away all the indexes
+			# into a different array
+			end_of_row_fx_idxs.sort(reverse=True)
+			for idx in end_of_row_fx_idxs:
+				fx = row.effects.pop(idx)
+				end_of_row_fxs.append(fx)
+
+			extended_pat.rows.append(row)
+			if i%2 == 0: 
+				for _ in range(speed1-1): extended_pat.rows.append(PatternRow())
 			else:
-				extended_pat.rows.extend([empty_row] * (speed2-1))
+				for _ in range(speed2-1): extended_pat.rows.append(PatternRow())
+			extended_pat.rows[-1].effects.extend(end_of_row_fxs)
+
 		self.patterns[ch][pat_idx] = extended_pat
 		self.pattern_matrix.rows_per_pattern = len(extended_pat.rows)
 		
 	def patch_0B_fx(self, ch: int, patmat_row: int):
 		"""
 		If there's a $0B (Position Jump) effect, add one
-		to every nonempty channel in the same row
+		to every nonempty channel in the same row. 
 		|C1 0B02|D4 ----|E2 0400| -> |C1 0B02|D4 0B02|E2 0400 0B02|
+
+		ONLY WORKS WITH AN UNOPTIMIZED PATTERN MATRIX!
 		"""
 		pat_idx = self.pattern_matrix.matrix[ch][patmat_row]
 		pat = self.patterns[ch][pat_idx]
