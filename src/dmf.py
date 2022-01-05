@@ -720,16 +720,29 @@ class Module:
 			self.optimize_empty_channels(ch)
 
 	def optimize_equal_patterns(self, ch: int):
+		"""
+		Merges equal patterns and updates the pattern matrix accordingly
+		"""
 		patterns_with_ids = [] # [(pattern, id); ...]
+		new_pattern_list = []
+
+		# Arranges patterns in a easy to group format
 		for i in range(len(self.patterns[ch])):
 			patterns_with_ids.append((self.patterns[ch][i], i))
 		patterns_with_ids.sort(key=lambda tup: tup[0])
 
+		# Finds group of equal patterns, adds to the new pattern list
+		# a single pattern (doesn't matter which they're all the same)
+		# and then also updates the pattern matrix accordingly.
 		for _, eq_pats_iter in groupby(patterns_with_ids, key=lambda tup: tup[0]):
 			eq_pats = list(eq_pats_iter)
 			merged_pat_idx = eq_pats[0][1]
-			for pat, i in eq_pats:
-				self.pattern_matrix.matrix[ch][i] = merged_pat_idx
+			new_pattern_list.append(self.patterns[ch][merged_pat_idx])
+			for pat, idx in eq_pats:
+				print(idx, end=', ')
+				self.pattern_matrix.matrix[ch][idx] = len(new_pattern_list)-1
+		
+		self.patterns[ch] = new_pattern_list
 
 	def optimize_empty_channels(self, ch: int):
 		"""

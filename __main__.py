@@ -32,7 +32,8 @@ def print_df_info(mod, channels: [int]):
 
 		for j in range(mod.pattern_matrix.rows_per_pattern):
 			for ch in channels:
-				row = mod.patterns[ch][i].rows[j]
+				pat_idx = mod.pattern_matrix.matrix[ch][i]
+				row = mod.patterns[ch][pat_idx].rows[j]
 				note_lbl = "--"
 				oct_lbl  = "-"
 				vol_lbl  = "--"
@@ -102,7 +103,7 @@ for i in range(len(args.dmf_module_paths)):
 
 mlm_sdata = mzs.SoundData()
 print(f"Converting DMFs...", end='', flush=True)
-mlm_sdata.add_dmfs(dmf_modules)
+#mlm_sdata.add_dmfs(dmf_modules)
 print(" OK")
 
 if sfx_samples != None:
