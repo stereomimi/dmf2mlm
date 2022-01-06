@@ -182,7 +182,8 @@ class Song:
 
 		for i in range(len(self.sub_el_idx_matrix[ch])):
 			sub_el_idx = self.sub_el_idx_matrix[ch][i]
-			dmf_pat = module.patterns[ch][i]
+			dmf_pat_idx = module.pattern_matrix.matrix[ch][i]
+			dmf_pat = module.patterns[ch][dmf_pat_idx]
 
 			if sub_el_idx not in converted_sub_els:
 				sub_el = self._sub_el_from_pattern(dmf_pat, ch, module.time_info)

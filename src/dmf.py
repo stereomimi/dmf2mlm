@@ -6,6 +6,7 @@ from typing import Optional
 from itertools import groupby
 from copy import deepcopy
 import zlib
+import math
 from .utils import *
 from .defs import *
 
@@ -656,11 +657,10 @@ class Module:
 				self.patch_extend_pattern(i, j)
 
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
-				self.patch_0B_fx(i, j)
+				self.patch_0B_fx(i, j)		
 		self.time_info.tick_time_base = 1
 		self.time_info.tick_time_1 = 1
 		self.time_info.tick_time_2 = 1
-
 
 	def patch_unoptimize_pat_matrix(self, ch: int):
 		"""
@@ -672,10 +672,10 @@ class Module:
 			self.pattern_matrix.matrix[ch][i] = i
 
 	def patch_extend_pattern(self, ch: int, pat_idx: int):
-		"""
+		"""1+5
 		Extends the pattern as much as possible.
-		|C1 |C2 |D3#|                 (bspd: 2, spdA: 2, spdB: 1)
-		|C1 |---|---|---|C2 |---|D3#| (bspd: 1, spdA: 1, spdB: 1)
+		|C1 |C2 |D3#|                             (bspd: 2, spdA: 2, spdB: 1)
+		|C1 |---|---|---|C2 |---|D3#|---|---|---| (bspd: 1, spdA: 1, spdB: 1)
 		DOESN'T SET SPEEDS. That should be done after extending all patterns.
 		"""
 		old_pat = self.patterns[ch][pat_idx]
