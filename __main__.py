@@ -112,7 +112,7 @@ if sfx_samples != None:
 	print(" OK")
 
 #print_df_info(dmf_modules[0], [0, 4, 7])
-print_info(mlm_sdata)
+#print_info(mlm_sdata)
 
 print(f"Compiling...", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()
