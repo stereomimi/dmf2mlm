@@ -239,6 +239,12 @@ class Effect:
 	def __eq__(self, other):
 		return self.code == other.code and self.value == other.value
 
+	def __str__(self):
+		return "{0}(${1:02X})".format(self.code, self.value)
+
+	def __repr__(self):
+		return "{0}(${1:02X})".format(self.code.name, self.value)
+
 class PatternRow:
 	note: Optional[Note]
 	octave: Optional[int]
@@ -656,6 +662,7 @@ class Module:
 			for j in range(len(self.patterns[i])):
 				self.patch_extend_pattern(i, j)
 
+		for i in range(SYSTEM_TOTAL_CHANNELS):
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
 				self.patch_0B_fx(i, j)		
 		self.time_info.tick_time_base = 1
@@ -672,7 +679,7 @@ class Module:
 			self.pattern_matrix.matrix[ch][i] = i
 
 	def patch_extend_pattern(self, ch: int, pat_idx: int):
-		"""1+5
+		"""
 		Extends the pattern as much as possible.
 		|C1 |C2 |D3#|                             (bspd: 2, spdA: 2, spdB: 1)
 		|C1 |---|---|---|C2 |---|D3#|---|---|---| (bspd: 1, spdA: 1, spdB: 1)
@@ -691,10 +698,10 @@ class Module:
 			# Some pattern are executed at the *end* of a tick, not
 			# the start. Those need to be appropiately dealt with.
 			#   Find all the indexes of said effects.
-			for i in range(len(row.effects)):
-				fx = row.effects[i]
+			for j in range(len(row.effects)):
+				fx = row.effects[j]
 				if fx.code == EffectCode.POS_JUMP:
-					end_of_row_fx_idxs.append(i)
+					end_of_row_fx_idxs.append(j)
 
 			# Reverse the index list as to not have to deal with
 			# needed element indexes changing. Pop away all the indexes
