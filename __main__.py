@@ -77,47 +77,47 @@ sfx_samples = None
 if args.sfx_directory != None:
 	print("Parsing SFX... ", end='', flush=True)
 	sfx_samples = sfx.SFXSamples(args.sfx_directory)
-	print(" OK")
+	print("OK")
 
 	if args.sfx_header != None:
-		print("Generating SFX Header...", end='', flush=True)
+		print("Generating SFX Header... ", end='', flush=True)
 		c_header = sfx_samples.generate_c_header()
-		print(" OK")
-		print(f"Saving SFX Header as '{args.sfx_header}'...", end='', flush=True)
+		print("OK")
+		print(f"Saving SFX Header as '{args.sfx_header}'... ", end='', flush=True)
 		with open(args.sfx_header, "w") as file:
 			file.write(c_header)
-		print(" OK")
+		print("OK")
 			
 
 for i in range(len(args.dmf_module_paths)):
 	with open(args.dmf_module_paths[i], "rb") as file:
-		print(f"Parsing '{args.dmf_module_paths[i]}'...", end='', flush=True)
+		print(f"Parsing '{args.dmf_module_paths[i]}'... ", end='', flush=True)
 		mod = dmf.Module(file.read())
-		print(" OK")
+		print("OK")
 
-		print(f"Optimizing '{args.dmf_module_paths[i]}'...", end='', flush=True)
+		print(f"Optimizing '{args.dmf_module_paths[i]}'... ", end='', flush=True)
 		mod.patch_for_mzs()
 		mod.optimize()
-		print(" OK")
+		print("OK")
 		dmf_modules.append(mod)
 
 mlm_sdata = mzs.SoundData()
-print(f"Converting DMFs...", end='', flush=True)
+print(f"Converting DMFs... ", end='', flush=True)
 mlm_sdata.add_dmfs(dmf_modules)
-print(" OK")
+print("OK")
 
 if sfx_samples != None:
-	print(f"Converting SFX...", end='', flush=True)
+	print(f"Converting SFX... ", end='', flush=True)
 	mlm_sdata.add_sfx(sfx_samples, False)
-	print(" OK")
+	print("OK")
 
 #print_df_info(dmf_modules[0], [0, 4, 7])
 #print_info(mlm_sdata)
 
-print(f"Compiling...", end='', flush=True)
+print(f"Compiling... ", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()
 mlm_compiled_vrom = mlm_sdata.compile_vrom()
-print(" OK")
+print("OK")
 
 with open("m1_sdata.bin", "wb") as file:
 	file.write(mlm_compiled_sdata)

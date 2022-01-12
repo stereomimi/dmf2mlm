@@ -194,6 +194,9 @@ class Song:
 		"""
 		Here DMF patterns get converted into MLM sub-event lists
 		"""
+		if not hasattr(Song._sub_el_from_pattern, "warned_uncomp_fxs"):
+			Song._sub_el_from_pattern.warned_uncomp_fxs = []
+
 		df_fx_to_mlm_event_map = {
 			1:  SongComPitchUpwardSlide,
 			2:  SongComPitchDownwardSlide,
@@ -244,11 +247,17 @@ class Song:
 				for effect in row.effects:
 					if effect.code != dmf.EffectCode.SET_SAMPLES_BANK:
 						if effect.value != None:
-							mlm_event = df_fx_to_mlm_event_map[effect.code]
-							sub_el.events.append(mlm_event.from_dffx(effect.value))
-					if effect.code == dmf.EffectCode.POS_JUMP:
-						do_end_pattern = True
-			
+							if effect.code in df_fx_to_mlm_event_map:
+								mlm_event = df_fx_to_mlm_event_map[effect.code]
+								sub_el.events.append(mlm_event.from_dffx(effect.value))
+								if effect.code == dmf.EffectCode.POS_JUMP:
+									do_end_pattern = True
+							else:
+								if not (effect.code in Song._sub_el_from_pattern.warned_uncomp_fxs):
+									Song._sub_el_from_pattern.warned_uncomp_fxs.append(effect.code)
+									print(f"\nWARNING: {effect.code.name} effect conversion isn't implemented and will be ignored")
+									
+
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
 			if do_end_pattern: break
