@@ -70,20 +70,20 @@ class SoundData:
 			comp_songs.append(self.songs[i].compile())
 
 		FBANK_SIZE = 0x2000 # The size of the fixed bank used for data
-		SBANK_SIZE = 0x7800 # The size of switchable bank windows 0, 1, 2 and 3
+		SBANK_SIZE = 0x8000 # The size of switchable bank windows 0, 1, 2 and 3
 		WRAM_PAD   = 0x800  # Padding inbetween banks
 		bank = 0
 		for i in range(len(self.songs)):
 			csong = comp_songs[i]
-			max_csong_size = SBANK_SIZE
+			max_csong_size = SBANK_SIZE - WRAM_PAD
 			if bank == 0: max_csong_size += FBANK_SIZE - header_size
 			if len(csong) > max_csong_size:
 				raise RuntimeError(f"Song n°{i+1} is too big (>{max_csong_size}, bank {bank})")
 			
-			bank_limit = FBANK_SIZE + SBANK_SIZE*(bank+1)
+			bank_limit = FBANK_SIZE + SBANK_SIZE*(bank+1) - WRAM_PAD
 			if len(comp_sdata) + len(csong) > bank_limit:
-				next_bank_ofs = bank_limit + WRAM_PAD*bank
-				pad = bytearray(next_bank_ofs - (len(comp_sdata) + len(csong)))
+				next_bank_ofs = bank_limit + WRAM_PAD
+				pad = bytearray(len(comp_sdata) + len(csong) - next_bank_ofs)
 				comp_sdata.extend(pad)
 				bank += 1
 

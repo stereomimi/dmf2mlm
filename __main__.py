@@ -95,8 +95,11 @@ for i in range(len(args.dmf_module_paths)):
 		mod = dmf.Module(file.read())
 		print("OK")
 
-		print(f"Optimizing '{args.dmf_module_paths[i]}'... ", end='', flush=True)
+		print(f"Patching '{args.dmf_module_paths[i]}'... ", end='', flush=True)
 		mod.patch_for_mzs()
+		print("OK")
+		
+		print(f"Optimizing '{args.dmf_module_paths[i]}'... ", end='', flush=True)
 		mod.optimize()
 		print("OK")
 		dmf_modules.append(mod)
