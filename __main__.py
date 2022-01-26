@@ -21,17 +21,21 @@ def print_info(mlm_sdata):
 				
 def print_df_info(mod, channels: [int]):
 	for ch in channels:
+		if mod.pattern_matrix.matrix[ch] == None: continue
 		print("|####[${0:02X}]####".format(ch), end='')
 	print("|")
 
 	for i in range(mod.pattern_matrix.rows_in_pattern_matrix):
 		for ch in channels:
+			if mod.pattern_matrix.matrix[ch] == None: continue
 			subel_idx = mod.pattern_matrix.matrix[ch][i]
 			print("|====(${0:02X})====".format(subel_idx), end='')
 		print("|")
 
 		for j in range(mod.pattern_matrix.rows_per_pattern):
+			continue
 			for ch in channels:
+				if mod.pattern_matrix.matrix[ch] == None: continue
 				pat_idx = mod.pattern_matrix.matrix[ch][i]
 				row = mod.patterns[ch][pat_idx].rows[j]
 				note_lbl = "--"
@@ -114,7 +118,7 @@ if sfx_samples != None:
 	mlm_sdata.add_sfx(sfx_samples, False)
 	print("OK")
 
-#print_df_info(dmf_modules[0], [0, 4, 7])
+print_df_info(dmf_modules[0], list(range(0, 13)))
 #print_info(mlm_sdata)
 
 print(f"Compiling... ", end='', flush=True)

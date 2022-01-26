@@ -661,7 +661,7 @@ class Module:
 			self.patch_unoptimize_pat_matrix(i)
 			for j in range(len(self.patterns[i])):
 				self.patch_extend_pattern(i, j)
-
+		
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
 				self.patch_0B_fx(i, j)		
@@ -752,6 +752,7 @@ class Module:
 					self.patterns[i][pat_idx].rows[row_idx].effects.append(fx)
 
 	def optimize(self):
+		return
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
 			self.optimize_equal_patterns(ch)
 			self.optimize_empty_channels(ch)
