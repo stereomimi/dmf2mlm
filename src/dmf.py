@@ -663,6 +663,7 @@ class Module:
 				self.patch_extend_pattern(i, j)
 		
 		for i in range(SYSTEM_TOTAL_CHANNELS):
+			self.patch_pslide_reset(i)
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
 				self.patch_0B_fx(i, j)		
 		self.time_info.tick_time_base = 1
@@ -720,7 +721,29 @@ class Module:
 
 		self.patterns[ch][pat_idx] = extended_pat
 		self.pattern_matrix.rows_per_pattern = len(extended_pat.rows)
-		
+
+	def patch_pslide_reset(self, ch: int):
+		"""
+		Adds a pitch slide reset at the first row of the first pattern
+		if the channel supports pitch slides.
+		TODO: exclude channels that don't use pitch slides
+		"""
+		if get_channel_kind(ch) == ChannelKind.ADPCMA:
+			return
+		pat_idx = self.pattern_matrix.matrix[ch][0]
+		row = self.patterns[ch][pat_idx].rows[0]
+		pslide_is_set = False
+		for fx in row.effects:
+			pslide_is_set |= fx.code == EffectCode.PORTAMENTO_UP
+			pslide_is_set |= fx.code == EffectCode.PORTAMENTO_DOWN
+			if pslide_is_set:
+				print(ch, fx)
+				break
+		if not pslide_is_set:
+			pslide_reset = Effect(EffectCode.PORTAMENTO_UP, 0)
+			row.effects.append(pslide_reset)
+
+
 	def patch_0B_fx(self, ch: int, patmat_row: int):
 		"""
 		If there's a $0B (Position Jump) effect, add one

@@ -22,18 +22,17 @@ def print_info(mlm_sdata):
 def print_df_info(mod, channels: [int]):
 	for ch in channels:
 		if mod.pattern_matrix.matrix[ch] == None: continue
-		print("|####[${0:02X}]####".format(ch), end='')
+		print("|#########[${0:02X}]#########".format(ch), end='')
 	print("|")
 
 	for i in range(mod.pattern_matrix.rows_in_pattern_matrix):
 		for ch in channels:
 			if mod.pattern_matrix.matrix[ch] == None: continue
 			subel_idx = mod.pattern_matrix.matrix[ch][i]
-			print("|====(${0:02X})====".format(subel_idx), end='')
+			print("|=========(${0:02X})=========".format(subel_idx), end='')
 		print("|")
 
 		for j in range(mod.pattern_matrix.rows_per_pattern):
-			continue
 			for ch in channels:
 				if mod.pattern_matrix.matrix[ch] == None: continue
 				pat_idx = mod.pattern_matrix.matrix[ch][i]
@@ -42,18 +41,34 @@ def print_df_info(mod, channels: [int]):
 				oct_lbl  = "-"
 				vol_lbl  = "--"
 				inst_lbl = "--"
-				fx0_lbl  = "----"
+				fx_lbl  = ""
 				if row.octave != None:
 					oct_lbl = str(row.octave)
 				if row.note == dmf.Note.NOTE_OFF:
-					note_lbl = "~~"
-					oct_lbl  = "~"
+					note_lbl = "OF"
+					oct_lbl  = "F"
 				elif row.note != None:
 					note_lbl = row.note.name.ljust(2, '-').replace('S', '#')
 				if row.volume != None:
 					vol_lbl = "{:02X}".format(row.volume)
 				if row.instrument != None:
 					inst_lbl = "{:02X}".format(row.instrument)
+				for k in range(3):
+					if k >= len(row.effects):
+						fx_lbl += " ----"
+					else:
+						fx = row.effects[k]
+						if fx.code == dmf.EffectCode.EMPTY:
+							fx_lbl += " ~~"
+						else:
+							fx_lbl += " {:02X}".format(fx.code.value)
+						if fx.value == None:
+							fx_lbl += "~~"
+						else:
+							fx_lbl += "{:02X}".format(fx.value)
+
+
+				"""
 				if len(row.effects) > 0:
 					fx0 = row.effects[0]
 					if fx0.code == dmf.EffectCode.EMPTY:
@@ -64,10 +79,9 @@ def print_df_info(mod, channels: [int]):
 						fx0_lbl += "--"
 					else:
 						fx0_lbl += "{:02X}".format(fx0.value)
-				print("|{0}{1} {2}{3} {4}".format(note_lbl, oct_lbl, vol_lbl, inst_lbl, fx0_lbl), end='')
-			print("|")
-
-		
+				"""
+				print("|{0}{1} {2}{3}{4}".format(note_lbl, oct_lbl, vol_lbl, inst_lbl, fx_lbl), end='')
+			print("|")	
 
 parser = argparse.ArgumentParser(description='Convert DMF modules and SFX to an MLM driver compatible format')
 parser.add_argument('dmf_module_paths', type=str, nargs='*', help="The paths to the input DMF files")
@@ -118,8 +132,11 @@ if sfx_samples != None:
 	mlm_sdata.add_sfx(sfx_samples, False)
 	print("OK")
 
+print("{")
 print_df_info(dmf_modules[0], list(range(0, 13)))
-#print_info(mlm_sdata)
+print("}\n{")
+print_info(mlm_sdata)
+print("}")
 
 print(f"Compiling... ", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()
