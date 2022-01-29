@@ -132,11 +132,13 @@ if sfx_samples != None:
 	mlm_sdata.add_sfx(sfx_samples, False)
 	print("OK")
 
+"""
 print("{")
 print_df_info(dmf_modules[0], list(range(0, 13)))
 print("}\n{")
 print_info(mlm_sdata)
 print("}")
+"""
 
 print(f"Compiling... ", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()
