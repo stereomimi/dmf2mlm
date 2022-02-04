@@ -622,10 +622,14 @@ class Module:
 			self.head_ofs += instrument.size
 
 	def parse_wavetables(self):
-		wavetable_count = self.data[self.head_ofs]
-		if wavetable_count != 0:
-			raise RuntimeError("Wavetables aren't supported")
+		wt_count = self.data[self.head_ofs]
 		self.head_ofs += 1
+		for i in range(wt_count):
+			wt_size = self.data[self.head_ofs]
+			wt_size |= self.data[self.head_ofs+1] << 8
+			wt_size |= self.data[self.head_ofs+2] << 16
+			wt_size |= self.data[self.head_ofs+3] << 24
+			self.head_ofs += 4 + (wt_size * 4)
 
 	def parse_patterns(self):
 		self.patterns = []
