@@ -740,9 +740,7 @@ class Module:
 		for fx in row.effects:
 			pslide_is_set |= fx.code == EffectCode.PORTAMENTO_UP
 			pslide_is_set |= fx.code == EffectCode.PORTAMENTO_DOWN
-			if pslide_is_set:
-				print(ch, fx)
-				break
+			if pslide_is_set: break
 		if not pslide_is_set:
 			pslide_reset = Effect(EffectCode.PORTAMENTO_UP, 0)
 			row.effects.append(pslide_reset)
@@ -787,6 +785,7 @@ class Module:
 	def optimize_equal_patterns(self, ch: int):
 		"""
 		Merges equal patterns and updates the pattern matrix accordingly
+		BROKEN
 		"""
 		patterns_with_ids = [] # [(pattern, id); ...]
 		new_pattern_list = []
@@ -794,13 +793,14 @@ class Module:
 		# Arranges patterns in a easy to group format
 		for i in range(len(self.patterns[ch])):
 			patterns_with_ids.append((self.patterns[ch][i], i))
-		patterns_with_ids.sort(key=lambda tup: tup[0])
+		#patterns_with_ids.sort(key=lambda tup: tup[0])
 
 		# Finds group of equal patterns, adds to the new pattern list
 		# a single pattern (doesn't matter which they're all the same)
 		# and then also updates the pattern matrix accordingly.
 		for _, eq_pats_iter in groupby(patterns_with_ids, key=lambda tup: tup[0]):
 			eq_pats = list(eq_pats_iter)
+
 			merged_pat_idx = eq_pats[0][1]
 			new_pattern_list.append(self.patterns[ch][merged_pat_idx])
 			for pat, idx in eq_pats:
