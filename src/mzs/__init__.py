@@ -83,7 +83,7 @@ class SoundData:
 			bank_limit = FBANK_SIZE + SBANK_SIZE*(bank+1) - WRAM_PAD
 			if len(comp_sdata) + len(csong) > bank_limit:
 				next_bank_ofs = bank_limit + WRAM_PAD
-				pad = bytearray(len(comp_sdata) + len(csong) - next_bank_ofs)
+				pad = bytearray(next_bank_ofs - (len(comp_sdata) + len(csong)))
 				comp_sdata.extend(pad)
 				bank += 1
 
