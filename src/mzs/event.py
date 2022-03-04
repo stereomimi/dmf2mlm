@@ -126,9 +126,14 @@ class SongComSetChannelVol(SongCommand):
 
 	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
-		comp_data.append(0x05)        # Set channel volume command
-		comp_data.append(self.volume)
-		comp_data.extend(self._compile_timing())
+
+		if ch < 0x0A: # FM & ADPCMA
+			comp_data.append(0x05)        # Set channel volume command
+			comp_data.append(self.volume)
+			comp_data.extend(self._compile_timing())
+		else:
+			comp_data.append(0x30 | (self.volume >> 4))
+			comp_data.extend(self._compile_timing())
 
 		return comp_data
 
@@ -290,13 +295,11 @@ class SongComOffsetChannelVol(SongCommand):
 
 	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
-		
-		vol_shift_offsets = [
-			3, 3, 3, 3, 3, 3, # ADPCM-A channels
-			1, 1, 1, 1,       # FM channels
-			#4, 4, 4,         # SSG channels, should never be indexed
-		]
 
+		if ch >= 0x0A:
+			raise RuntimeError("SongComOffsetChannelVol is incompatible with SSG")
+		if self.volume_offset < -8 or self.volume_offset > 8 or self.volume_offset == 0:
+			raise RuntimeError("Invalid volume offset")
 		ofs_nibble = utils.clamp(abs(self.volume_offset), 1, 8) - 1
 		if self.volume_offset < 0: ofs_nibble |= 8 # Set sign bit to negative
 		comp_data.append(0x30 | ofs_nibble)

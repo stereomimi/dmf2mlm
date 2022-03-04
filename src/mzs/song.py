@@ -231,9 +231,18 @@ class Song:
 					sub_el.events.append(SongComNoteOff())
 
 				if row.volume != None and row.volume != current_volume:
+					use_vol_ofs = False # Use the shortened set volume command?
+					if current_volume != None and ch_kind != ChannelKind.SSG:
+						use_vol_ofs = abs(current_volume - row.volume) <= 8
+					
+					if use_vol_ofs:
+						volume_offset = current_volume - row.volume
+						sub_el.events.append(SongComOffsetChannelVol(volume_offset))
+					else:
+						mlm_volume = Song.ymvol_to_mlmvol(ch_kind, row.volume)
+						sub_el.events.append(SongComSetChannelVol(mlm_volume))
 					current_volume = row.volume
-					mlm_volume = Song.ymvol_to_mlmvol(ch_kind, current_volume)
-					sub_el.events.append(SongComSetChannelVol(mlm_volume))
+					
 				if row.instrument != None and row.instrument != current_instrument and ch_kind != dmf.ChannelKind.ADPCMA:
 					current_instrument = row.instrument
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
@@ -287,11 +296,19 @@ class Song:
 
 	def ymvol_to_mlmvol(ch_kind: ChannelKind, va: int):
 		"""
-		Takes a volume in YM2610 register ranges (they depend on the channel
-		kind) and converts it into the global MLM volume (0x00 ~ 0xFF)
+		Takes a volume in the YM2610 register range (they depend on the channel
+		kind) and converts it into the global MLM volume range (0x00 ~ 0xFF)
 		"""
 		YM_VOL_SHIFTS = [3, 1, 4] # ADPCMA, FM, SSG
 		return va << YM_VOL_SHIFTS[ch_kind]
+
+	def mlmvol_to_ymvol(ch_kind: ChannelKind, va: int):
+		"""
+		Takes a volume in the global MLM volume range (0x00 ~ 0xFF) and 
+		converts it into the YM2610 register range (depends on the channel)
+		"""
+		YM_VOL_SHIFTS = [3, 1, 4] # ADPCMA, FM, SSG
+		return va >> YM_VOL_SHIFTS[ch_kind]
 
 	def dmfnote_to_mlmnote(self, ch_kind: ChannelKind, note: int, octave: int):
 		if note == 12: # C is be expressed as 12 instead than 0
