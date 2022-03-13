@@ -41,5 +41,4 @@ class ADPCMAEncoder:
         with open(PCMA_FILE_NAME, "rb") as file:
             out_buffer = file.read()
         os.remove(PCMA_FILE_NAME)
-
         return out_buffer

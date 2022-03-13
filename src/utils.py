@@ -26,3 +26,11 @@ def signed2unsigned_3(n: int):
 def clamp(n, s, l): return max(s, min(n, l))
 
 def list_top(l: list): return l[len(l)-1]
+
+def wrap_rom_to_mlm_addr(rom_addr: int) -> int:
+	FBANK_SIZE = 0x2000 # The size of the fixed bank used for data
+	SBANK_SIZE = 0x8000 # The size of switchable bank windows 0, 1, 2 and 3
+	if rom_addr < FBANK_SIZE: return rom_addr
+	else:
+		rom_addr -= FBANK_SIZE
+		return (rom_addr % SBANK_SIZE) + FBANK_SIZE

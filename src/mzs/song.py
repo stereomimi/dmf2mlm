@@ -93,8 +93,8 @@ class Song:
 		self.tma_counter = Song.calculate_tma_cnt(hz_value)
 
 		self._samples_from_dmf_mod(module, vrom_ofs)
-		self.samples = map(lambda x: (x[0], x[1]+vrom_ofs, x[2]+vrom_ofs), self.samples)
-		self.samples = list(self.samples)
+		#self.samples = map(lambda x: (x[0], x[1], x[2]), self.samples)
+		#self.samples = list(self.samples)
 		self._instruments_from_dmf(module, self.samples)
 
 		for ch in range(len(module.pattern_matrix.matrix)):
@@ -139,8 +139,6 @@ class Song:
 
 	def _samples_from_dmf_mod(self, module: dmf.Module, vrom_ofs: int):
 		start_addr = vrom_ofs
-		#if len(self.samples) != 0: ???????
-		#	start_addr = utils.list_top(self.samples)[2] + 1
 
 		for dsmp in module.samples:
 			smp = Sample.from_dmf_sample(dsmp)
@@ -232,8 +230,8 @@ class Song:
 
 				if row.volume != None and row.volume != current_volume:
 					use_vol_ofs = False # Use the shortened set volume command?
-					if current_volume != None and ch_kind != ChannelKind.SSG:
-						use_vol_ofs = abs(current_volume - row.volume) <= 8
+					#if current_volume != None and ch_kind != ChannelKind.SSG: 
+					#	use_vol_ofs = abs(current_volume - row.volume) <= 8
 					
 					if use_vol_ofs:
 						volume_offset = current_volume - row.volume
@@ -432,8 +430,7 @@ class Song:
 	def replace_symbols(self, comp_song: bytearray, def_addr_ofs = 0) -> bytearray:
 		for sym_name, addrs in self.symbols.items():
 			for ref_addr in addrs[1]:
-				offset_def_addr = addrs[0] + def_addr_ofs
+				offset_def_addr = utils.wrap_rom_to_mlm_addr(addrs[0] + def_addr_ofs)
 				comp_song[ref_addr]   = offset_def_addr & 0xFF
 				comp_song[ref_addr+1] = offset_def_addr >> 8
-				#print(ref_addr, addrs[0], offset_def_addr)
 		return comp_song

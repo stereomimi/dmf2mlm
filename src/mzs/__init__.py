@@ -22,11 +22,14 @@ class SoundData:
 		self.vrom_ofs = 0
 
 	def add_dmfs(self, modules: [dmf.Module]):
+		i = 0
 		for mod in modules:
 			song = Song.from_dmf(mod, self.vrom_ofs)
 			self.songs.append(song)
 			if len(song.samples) > 0:
 				self.vrom_ofs = utils.list_top(song.samples)[2]+1
+			print(i, "\t{:04X}".format(self.vrom_ofs))
+			i += 1
 		return self
 	
 	def add_sfx(self, sfx_smps: sfx.SFXSamples, verbose: bool = False):
@@ -83,13 +86,14 @@ class SoundData:
 			bank_limit = FBANK_SIZE + SBANK_SIZE*(bank+1) - WRAM_PAD
 			if len(comp_sdata) + len(csong) > bank_limit:
 				next_bank_ofs = bank_limit + WRAM_PAD
-				pad = bytearray(next_bank_ofs - (len(comp_sdata) + len(csong)))
+				pad = bytearray(next_bank_ofs - len(comp_sdata))
 				comp_sdata.extend(pad)
 				bank += 1
 
+			song_ofs = utils.wrap_rom_to_mlm_addr(len(comp_sdata))
 			comp_sdata[3 + i*4]     = bank
-			comp_sdata[3 + i*4 + 1] = len(comp_sdata) & 0xFF
-			comp_sdata[3 + i*4 + 2] = len(comp_sdata) >> 8
+			comp_sdata[3 + i*4 + 1] = song_ofs & 0xFF
+			comp_sdata[3 + i*4 + 2] = song_ofs >> 8
 			csong = self.songs[i].replace_symbols(csong, len(comp_sdata))
 			comp_sdata.extend(csong)
 		
@@ -123,3 +127,4 @@ class SoundData:
 			comp_vrom[smp_saddr:smp_eaddr] = sample[0].data
 
 		return comp_vrom
+		

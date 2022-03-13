@@ -777,6 +777,7 @@ class Module:
 					self.patterns[i][pat_idx].rows[row_idx].effects.append(fx)
 
 	def optimize(self):
+		return
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
 			self.optimize_equal_patterns(ch)
 			self.optimize_empty_channels(ch)
