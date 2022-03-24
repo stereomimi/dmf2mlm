@@ -223,7 +223,8 @@ class Song:
 				# possibly using samples
 				for effect in row.effects:
 					if effect.code == dmf.EffectCode.SET_SAMPLES_BANK:
-						sample_bank = effect.value
+						if effect.value < ceil(len(self.samples) / 12.0): # If bank actually exists
+							sample_bank = effect.value
 
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
@@ -260,6 +261,7 @@ class Song:
 								if effect.code == dmf.EffectCode.POS_JUMP:
 									do_end_pattern = True
 							else:
+								sub_el.events.append(SongComWaitTicks()) # a NOP, avoids timing issues.
 								if not (effect.code in Song._sub_el_from_pattern.warned_uncomp_fxs):
 									Song._sub_el_from_pattern.warned_uncomp_fxs.append(effect.code)
 									print(f"\nWARNING: {effect.code.name} effect conversion isn't implemented and will be ignored")
