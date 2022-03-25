@@ -227,6 +227,13 @@ class EffectCode(IntEnum):
 	SYNC_SIGNAL                 = 0xEE
 	SET_GLOBAL_FINE_TUNE        = 0xEF
 
+# Effects supported by the mzs converter.
+# TODO: FIND BETTER WAY TO REMOVE EFFECTS THAT DOESN'T MESS TIMING.
+supported_effects = [
+	EffectCode.PORTAMENTO_UP, EffectCode.PORTAMENTO_DOWN, 
+	EffectCode.POS_JUMP,      EffectCode.SET_SAMPLES_BANK
+]
+
 class Effect:
 	code: EffectCode
 	value: Optional[int]
@@ -259,7 +266,6 @@ class PatternRow:
 		self.effects    = []
 		self.instrument = None
 		
-
 	def from_data(data: bytes, effect_count: int):
 		row = PatternRow()
 		row.note = Note(data[0] | (data[1] << 8))
@@ -269,9 +275,10 @@ class PatternRow:
 
 		for i in range(effect_count):
 			code = EffectCode(data[head_ofs] | (data[head_ofs+1] << 8))
-			value = data[head_ofs+2] | (data[head_ofs+3] << 8)
-			if code != EffectCode.EMPTY:
-				row.effects.append(Effect(code, value))
+			if code in supported_effects:
+				value = data[head_ofs+2] | (data[head_ofs+3] << 8)
+				if code != EffectCode.EMPTY:
+					row.effects.append(Effect(code, value))
 			head_ofs += 4
 			
 		row.instrument = data[head_ofs] | (data[head_ofs+1] << 8)
