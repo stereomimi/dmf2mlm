@@ -28,7 +28,6 @@ class SoundData:
 			self.songs.append(song)
 			if len(song.samples) > 0:
 				self.vrom_ofs = utils.list_top(song.samples)[2]+1
-			print(i, "\t{:04X}".format(self.vrom_ofs))
 			i += 1
 		return self
 	
