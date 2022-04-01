@@ -216,7 +216,7 @@ class Song:
 
 			if not row.is_empty():
 				last_com = utils.list_top(sub_el.events)
-				last_com.timing = ticks_since_last_com
+				last_com.timing += ticks_since_last_com
 				ticks_since_last_com = 0
 
 				# Check for sample bank switches before
