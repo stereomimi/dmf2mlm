@@ -271,7 +271,7 @@ class Song:
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
 			if do_end_pattern: break
 
-		utils.list_top(sub_el.events).timing = ticks_since_last_com
+		utils.list_top(sub_el.events).timing += ticks_since_last_com
 		
 		# do_not_end_pattern is enabled by effects that
 		# end the current pattern, in those cases adding
