@@ -785,13 +785,13 @@ class Module:
 
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
-			#self.optimize_equal_patterns(ch)
+			self.optimize_equal_patterns(ch)
 			self.optimize_empty_channels(ch)
 
 	def optimize_equal_patterns(self, ch: int):
 		"""
 		Merges equal patterns and updates the pattern matrix accordingly
-		BROKEN
+		BROKEN?
 		"""
 		patterns_with_ids = [] # [(pattern, id); ...]
 		new_pattern_list = []
