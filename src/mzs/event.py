@@ -183,6 +183,7 @@ class SongComPositionJump(SongCommand):
 	def compile(self, ch: int, symbols: SymbolTable, head_ofs: int) -> bytearray:
 		comp_data = bytearray()
 		comp_data.extend(self._compile_timing())
+		comp_data.append(0x23) # Reset pitch slide
 		comp_data.append(0x0B) # Position jump command
 		
 		sym_name = "JSEL:CH{0:01X};{1:02X}".format(ch, self.jsel_idx)
