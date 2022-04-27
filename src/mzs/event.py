@@ -137,13 +137,32 @@ class SongComSetChannelVol(SongCommand):
 
 		return comp_data
 
+@dataclass
 class SongComSetPanning(SongCommand):
 	"""
 	Song Command Set Panning
 	------------------------------
 	Set's the ADPCM-A master volume
 	"""
-	panning: Panning
+	panning: int
+
+	def from_dffx(value: int):
+		p = 0
+		if   value == 0x01: p = int(Panning.RIGHT)
+		elif value == 0x10: p = int(Panning.LEFT)
+		elif value == 0x11: p = int(Panning.CENTER)
+		return SongComSetPanning(p)
+
+	def compile(self, ch, _symbols, _head_ofs):
+		comp_data = bytearray(2)
+		t = self.timing
+		
+		comp_data[0] = 0x06           # Set panning command
+		comp_data[1] = (t & 0x3F) | self.panning
+		t -= 0x3F
+		comp_data.extend(self._compile_timing(t))
+
+		return comp_data
 
 @dataclass
 class SongComJumpToSubEL(SongCommand):

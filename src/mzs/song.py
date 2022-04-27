@@ -198,6 +198,7 @@ class Song:
 		df_fx_to_mlm_event_map = {
 			1:  SongComPitchUpwardSlide,
 			2:  SongComPitchDownwardSlide,
+			8:  SongComSetPanning,
 			11: SongComPositionJump,
 		}
 

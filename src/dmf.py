@@ -231,7 +231,8 @@ class EffectCode(IntEnum):
 # TODO: FIND BETTER WAY TO REMOVE EFFECTS THAT DOESN'T MESS TIMING.
 supported_effects = [
 	EffectCode.PORTAMENTO_UP, EffectCode.PORTAMENTO_DOWN, 
-	EffectCode.POS_JUMP,      EffectCode.SET_SAMPLES_BANK
+	EffectCode.POS_JUMP,      EffectCode.SET_SAMPLES_BANK,
+	EffectCode.PANNING
 ]
 
 class Effect:
