@@ -200,6 +200,10 @@ class Song:
 			2:  SongComPitchDownwardSlide,
 			8:  SongComSetPanning,
 			11: SongComPositionJump,
+			18: SongComFMTL1Set,
+			19: SongComFMTL2Set,
+			20: SongComFMTL3Set,
+			21: SongComFMTL4Set
 		}
 
 		sub_el = EventList("sub")

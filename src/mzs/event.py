@@ -303,6 +303,90 @@ class SongComPitchDownwardSlide(SongCommand):
 		return comp_data
 
 @dataclass
+class SongComFMTL1Set(SongCommand):
+	"""
+	Song Command FM TL OP1 Set
+	------------------------------
+	Sets FM OP1's TL 
+	"""
+	tl: int
+
+	def from_dffx(value: int):
+		return SongComFMTL1Set(value)
+
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
+		comp_data = bytearray(2)
+
+		comp_data[0] = 0x24 # Set FM OP1 TL Command
+		comp_data[1] = self.tl
+		comp_data.extend(self._compile_timing())
+
+		return comp_data
+
+@dataclass
+class SongComFMTL2Set(SongCommand):
+	"""
+	Song Command FM TL OP2 Set
+	------------------------------
+	Sets FM OP2's TL 
+	"""
+	tl: int
+
+	def from_dffx(value: int):
+		return SongComFMTL2Set(value)
+		
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
+		comp_data = bytearray(2)
+
+		comp_data[0] = 0x25 # Set FM OP2 TL Command
+		comp_data[1] = self.tl
+		comp_data.extend(self._compile_timing())
+
+		return comp_data
+
+@dataclass
+class SongComFMTL3Set(SongCommand):
+	"""
+	Song Command FM TL OP3 Set
+	------------------------------
+	Sets FM OP3's TL 
+	"""
+	tl: int
+
+	def from_dffx(value: int):
+		return SongComFMTL3Set(value)
+		
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
+		comp_data = bytearray(2)
+
+		comp_data[0] = 0x26 # Set FM OP3 TL Command
+		comp_data[1] = self.tl
+		comp_data.extend(self._compile_timing())
+
+		return comp_data
+
+@dataclass
+class SongComFMTL4Set(SongCommand):
+	"""
+	Song Command FM TL OP4 Set
+	------------------------------
+	Sets FM OP4's TL 
+	"""
+	tl: int
+
+	def from_dffx(value: int):
+		return SongComFMTL4Set(value)
+		
+	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
+		comp_data = bytearray(2)
+
+		comp_data[0] = 0x27 # Set FM OP4 TL Command
+		comp_data[1] = self.tl
+		comp_data.extend(self._compile_timing())
+
+		return comp_data
+	
+@dataclass
 class SongComOffsetChannelVol(SongCommand):
 	"""
 	Song Command Set Channel Volume

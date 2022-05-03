@@ -230,9 +230,11 @@ class EffectCode(IntEnum):
 # Effects supported by the mzs converter.
 # TODO: FIND BETTER WAY TO REMOVE EFFECTS THAT DOESN'T MESS TIMING.
 supported_effects = [
-	EffectCode.PORTAMENTO_UP, EffectCode.PORTAMENTO_DOWN, 
-	EffectCode.POS_JUMP,      EffectCode.SET_SAMPLES_BANK,
-	EffectCode.PANNING
+	EffectCode.PORTAMENTO_UP,     EffectCode.PORTAMENTO_DOWN, 
+	EffectCode.POS_JUMP,          EffectCode.SET_SAMPLES_BANK,
+	EffectCode.PANNING,
+	EffectCode.FM_TL_OP1_CONTROL, EffectCode.FM_TL_OP2_CONTROL,
+	EffectCode.FM_TL_OP3_CONTROL, EffectCode.FM_TL_OP4_CONTROL,
 ]
 
 class Effect:
