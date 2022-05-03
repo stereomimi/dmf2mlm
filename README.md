@@ -16,7 +16,7 @@ Program that converts deflemask project files to a neogeo M1ROM running the Mezz
 - Only 255 instruments per song can be used, since one instrument is used for
 ADPCM-A samples
 
-- SSG Noise tone macros will be ignored because I don't know how they'd work (there's a single Noise channel shared inbetween all three channels=
+- SSG Noise tone macros will be ignored because I don't know how they'd work (there's a single Noise channel shared inbetween all three channels)
 
 - Do not use FM instruments with SSG channels, create an empty SSG instrument instead.
 
