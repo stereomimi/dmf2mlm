@@ -228,7 +228,7 @@ class EffectCode(IntEnum):
 	SET_GLOBAL_FINE_TUNE        = 0xEF
 
 # Effects supported by the mzs converter.
-# TODO: FIND BETTER WAY TO REMOVE EFFECTS THAT DOESN'T MESS TIMING.
+# TODO: FIND BETTER WAY TO REMOVE EFFECTS
 supported_effects = [
 	EffectCode.PORTAMENTO_UP,     EffectCode.PORTAMENTO_DOWN, 
 	EffectCode.POS_JUMP,          EffectCode.SET_SAMPLES_BANK,
