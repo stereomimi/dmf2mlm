@@ -402,7 +402,7 @@ class SongComIncPitchOfs(SongCommand):
 		comp_data = None
 		t = self.timing
 		
-		if offset > 0xFF:
+		if offset > 127 or offset < -128:
 			comp_data = bytearray(3)
 			word = signed2unsigned_16(offset)
 			comp_data[0] = 0x2A | (t & 1) # 16bit inc pitch ofs
