@@ -385,7 +385,39 @@ class SongComFMTL4Set(SongCommand):
 		comp_data.extend(self._compile_timing())
 
 		return comp_data
-	
+
+@dataclass
+class SongComIncPitchOfs(SongCommand):
+	"""
+	Song Command Increment pitch offset
+	------------------------------
+	Set's the ADPCM-A master volume
+	"""
+	offset: int
+
+	def from_dffx(value: int):
+		return SongComSetPanning(value)
+
+	def compile(self, ch, _symbols, _head_ofs):
+		comp_data = None
+		t = self.timing
+		
+		if offset > 0xFF:
+			comp_data = bytearray(3)
+			word = signed2unsigned_16(offset)
+			comp_data[0] = 0x2A | (t & 1) # 16bit inc pitch ofs
+			comp_data[1] = word & 0xFF
+			comp_data[2] = word >> 8
+		else:
+			comp_data = bytearray(2)
+			byte = signed2unsigned_8(offset)
+			comp_data[0] = 0x28 | (t & 1) # 16bit inc pitch ofs
+			comp_data[1] = byte
+		t -= 1
+		comp_data.extend(self._compile_timing(t))
+
+		return comp_data
+
 @dataclass
 class SongComOffsetChannelVol(SongCommand):
 	"""
