@@ -551,7 +551,6 @@ class Module:
 		self.data = zlib.decompress(compressed_data)
 		if not self.check_file():
 			raise RuntimeError("Corrupted DMF file")
-
 		self.parse_format_flags_and_system()
 		self.parse_visual_info()
 		self.parse_module_info()
@@ -669,7 +668,7 @@ class Module:
 			#print(sample)
 
 	# Take steps to make the DMF module MLM-compatible,
-	# used to make encoding algorithms easier
+	# used to make encoding algorithms simpler
 	def patch_for_mzs(self):
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			self.patch_unoptimize_pat_matrix(i)
@@ -679,7 +678,8 @@ class Module:
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			self.patch_pslide_reset(i)
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
-				self.patch_0B_fx(i, j)		
+				self.patch_0B_fx(i, j)
+			self.patch_vibrato(i)
 		self.time_info.tick_time_base = 1
 		self.time_info.tick_time_1 = 1
 		self.time_info.tick_time_2 = 1
@@ -755,7 +755,6 @@ class Module:
 			pslide_reset = Effect(EffectCode.PORTAMENTO_UP, 0)
 			row.effects.append(pslide_reset)
 
-
 	def patch_0B_fx(self, ch: int, patmat_row: int):
 		"""
 		If there's a $0B (Position Jump) effect, add one
@@ -785,6 +784,47 @@ class Module:
 				if not chrow_has_0b:
 					fx = Effect(EffectCode.POS_JUMP, fx_val)
 					self.patterns[i][pat_idx].rows[row_idx].effects.append(fx)
+
+	def patch_vibrato(self, ch: int):
+		"""
+		Converts vibrato effects into set fine tune effects
+		ONLY WORKS WITH AN UNOPTIMIZED PATTERN MATRIX!
+		"""
+		START_PMAT = 0
+		START_ROW  = 1
+		END_PMAT   = 2
+		END_ROW    = 3
+		vibrato_sections = [] # [(start_patmat_idx, start_row_idx, end_patmat_idx, end_row_idx,), ...]
+		is_vib_sect_started = False
+		vib_sect_info = (0, 0, 0, 0)
+
+		for i in range(self.pattern_matrix.rows_in_pattern_matrix):
+			pat_idx = self.pattern_matrix.matrix[ch][patmat_row]
+			pat = self.patterns[ch][pat_idx]
+
+			for j in range(len(pat.rows)):
+				for k in range(len(pat.rows[i].effects)):
+					fx = pat.rows[i].effects[j]
+					if fx.code == EffectCode.VIBRATO and fx.value != 0 and fx_value != None:
+						vib_sect_info[START_PMAT] = i
+						vib_sect_info[START_ROW]  = j
+						is_vib_sect_started = True
+
+					elif is_vib_sect_started and (fx.code == EffectCode.VIBRATO or fx.code == EffectCode.POS_JUMP):
+						vib_sect_info[END_PMAT] = i
+						vib_sect_info[END_ROW]  = j
+						is_vib_sect_started = False
+						vibrato_sections.append(vib_sect_info)
+
+		if is_vib_sect_started:
+			vib_sect_info[END_PMAT] = self.pattern_matrix.rows_in_pattern_matrix - 1
+			vib_sect_info[END_ROW]  = pat.rows - 1
+			is_vib_sect_started = False
+			vibrato_sections.append(vib_sect_info)
+
+		print("====[",ch,"]====")
+		print(vibrato_sections)
+		print()
 
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
