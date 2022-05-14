@@ -799,7 +799,7 @@ class Module:
 		vib_sect_info = (0, 0, 0, 0)
 
 		for i in range(self.pattern_matrix.rows_in_pattern_matrix):
-			pat_idx = self.pattern_matrix.matrix[ch][patmat_row]
+			pat_idx = self.pattern_matrix.matrix[ch][i]
 			pat = self.patterns[ch][pat_idx]
 
 			for j in range(len(pat.rows)):
