@@ -609,6 +609,10 @@ class Module:
 			for row in range(self.pattern_matrix.rows_in_pattern_matrix):
 				rows.append(self.data[self.head_ofs])
 				self.head_ofs += 1
+				if self.version >= 25: # Skip pattern names
+					name_len = self.data[self.head_ofs]
+					self.head_ofs += name_len + 1
+				
 			self.pattern_matrix.matrix.append(rows)
 
 	def parse_instruments(self):
