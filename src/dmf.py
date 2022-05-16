@@ -232,9 +232,10 @@ class EffectCode(IntEnum):
 supported_effects = [
 	EffectCode.PORTAMENTO_UP,     EffectCode.PORTAMENTO_DOWN, 
 	EffectCode.POS_JUMP,          EffectCode.SET_SAMPLES_BANK,
-	EffectCode.PANNING,
+	EffectCode.PANNING,          
 	EffectCode.FM_TL_OP1_CONTROL, EffectCode.FM_TL_OP2_CONTROL,
 	EffectCode.FM_TL_OP3_CONTROL, EffectCode.FM_TL_OP4_CONTROL,
+	EffectCode.VIBRATO
 ]
 
 class Effect:
@@ -798,18 +799,22 @@ class Module:
 		START_ROW  = 1
 		END_PMAT   = 2
 		END_ROW    = 3
-		vibrato_sections = [] # [(start_patmat_idx, start_row_idx, end_patmat_idx, end_row_idx,), ...]
+		vibrato_sections = [] # [[start_patmat_idx, start_row_idx, end_patmat_idx, end_row_idx], ...]
 		is_vib_sect_started = False
-		vib_sect_info = (0, 0, 0, 0)
+		vib_sect_info = [0, 0, 0, 0]
 
 		for i in range(self.pattern_matrix.rows_in_pattern_matrix):
 			pat_idx = self.pattern_matrix.matrix[ch][i]
 			pat = self.patterns[ch][pat_idx]
 
 			for j in range(len(pat.rows)):
-				for k in range(len(pat.rows[i].effects)):
-					fx = pat.rows[i].effects[j]
-					if fx.code == EffectCode.VIBRATO and fx.value != 0 and fx_value != None:
+				for k in range(len(pat.rows[j].effects)):
+					fx = pat.rows[j].effects[k]
+					if fx.code == EffectCode.VIBRATO and fx.value != 0 and fx.value != None:
+						if is_vib_sect_started:
+							vib_sect_info[END_PMAT] = i
+							vib_sect_info[END_ROW]  = j
+							vibrato_sections.append(list(vib_sect_info))
 						vib_sect_info[START_PMAT] = i
 						vib_sect_info[START_ROW]  = j
 						is_vib_sect_started = True
@@ -818,17 +823,17 @@ class Module:
 						vib_sect_info[END_PMAT] = i
 						vib_sect_info[END_ROW]  = j
 						is_vib_sect_started = False
-						vibrato_sections.append(vib_sect_info)
+						vibrato_sections.append(list(vib_sect_info))
 
 		if is_vib_sect_started:
 			vib_sect_info[END_PMAT] = self.pattern_matrix.rows_in_pattern_matrix - 1
 			vib_sect_info[END_ROW]  = pat.rows - 1
 			is_vib_sect_started = False
-			vibrato_sections.append(vib_sect_info)
+			vibrato_sections.append(list(vib_sect_info))
 
-		print("====[",ch,"]====")
-		print(vibrato_sections)
-		print()
+		#print("====[",ch,"]====")
+		#print(vibrato_sections)
+		#print()
 
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
