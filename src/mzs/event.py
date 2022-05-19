@@ -396,7 +396,7 @@ class SongComIncPitchOfs(SongCommand):
 	offset: int
 
 	def from_dffx(value: int):
-		return SongComSetPanning(value)
+		return SongComIncPitchOfs(value)
 
 	def compile(self, ch, _symbols, _head_ofs):
 		comp_data = None
