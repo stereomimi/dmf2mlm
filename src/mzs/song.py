@@ -213,6 +213,9 @@ class Song:
 		ticks_since_last_com = 0
 		current_instrument = None
 		current_volume = None
+		current_note   = None
+		current_octave = None
+		current_fine_tune = 0
 		sample_bank = 0
 
 		for i in range(len(pattern.rows)):
@@ -233,6 +236,8 @@ class Song:
 
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
+					current_note = None
+					current_octave = None
 
 				if row.volume != None and row.volume != current_volume:
 					use_vol_ofs = False # Use the shortened set volume command?
@@ -252,24 +257,42 @@ class Song:
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
 				if row.note != dmf.Note.NOTE_OFF and row.note != None and row.octave != None:
+					current_note = row.note
+					current_octave = row.octave
+					current_fine_tune = 0
 					mlm_note = self.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
 					if ch_kind == ChannelKind.ADPCMA: mlm_note += sample_bank * 12
 					sub_el.events.append(SongNote(mlm_note))
 
 				# Check all other effects here
 				for effect in row.effects:
-					if effect.code != dmf.EffectCode.SET_SAMPLES_BANK:
-						if effect.value != None:
-							if effect.code in df_fx_to_mlm_event_map:
-								mlm_event = df_fx_to_mlm_event_map[effect.code]
-								sub_el.events.append(mlm_event.from_dffx(effect.value))
-								if effect.code == dmf.EffectCode.POS_JUMP:
-									do_end_pattern = True
-							else:
-								sub_el.events.append(SongComWaitTicks()) # a NOP, avoids timing issues.
-								if not (effect.code in Song._sub_el_from_pattern.warned_uncomp_fxs):
-									Song._sub_el_from_pattern.warned_uncomp_fxs.append(effect.code)
-									print(f"\nWARNING: {effect.code.name} effect conversion isn't implemented and will be ignored")
+					if effect.code == dmf.EffectCode.SET_FINE_TUNE and effect.value != None:
+						if current_note != None and current_octave != None:
+							PM = 0 # Middle Pitch idx
+							PL = 1 # Lower Pitch idx
+							PH = 2 # Higher pitch idx
+							prange = self.dmfnote_to_ympitch_range(ch_kind, current_note, current_octave)
+							new_ftune = 0
+							if effect.value > 0x80:
+								new_ftune = (prange[PH] - prange[PM]) * (effect.value - 128) / 127
+							elif effect.value < 0x80:
+								new_ftune = (prange[PL] - prange[PM]) * (128 - effect.value) / -128
+							new_ftune = round(new_ftune)
+							ftune_ofs = new_ftune - current_fine_tune
+							current_fine_tune = new_ftune
+							sub_el.events.append(SongComIncPitchOfs(ftune_ofs))
+
+					elif effect.code != dmf.EffectCode.SET_SAMPLES_BANK and effect.value != None:
+						if effect.code in df_fx_to_mlm_event_map:
+							mlm_event = df_fx_to_mlm_event_map[effect.code]
+							sub_el.events.append(mlm_event.from_dffx(effect.value))
+							if effect.code == dmf.EffectCode.POS_JUMP:
+								do_end_pattern = True
+						else:
+							sub_el.events.append(SongComWaitTicks()) # a NOP, avoids timing issues.
+							if not (effect.code in Song._sub_el_from_pattern.warned_uncomp_fxs):
+								Song._sub_el_from_pattern.warned_uncomp_fxs.append(effect.code)
+								print(f"\nWARNING: {effect.code.name} effect conversion isn't implemented and will be ignored")
 									
 
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
@@ -316,7 +339,7 @@ class Song:
 		return va >> YM_VOL_SHIFTS[ch_kind]
 
 	def dmfnote_to_mlmnote(self, ch_kind: ChannelKind, note: int, octave: int):
-		if note == 12: # C is be expressed as 12 instead than 0
+		if note == 12: # C is expressed as 12 instead than 0
 			note = 0
 			if isinstance(octave, int): 
 				octave += 1
@@ -330,6 +353,59 @@ class Song:
 			return (octave-2)*12 + note
 		else: # Channel kind is ADPCMA
 			return note
+
+	def dmfnote_to_ympitch(self, ch_kind: ChannelKind, note: int, octave: int):
+		FM_PITCH_LUT = [
+		#   C     C#     D      D#     E      F      F#     G    
+			0x269, 0x28E, 0x2B5, 0x2DE, 0x30A, 0x338, 0x369, 0x39D,
+		#   G#    A      A#     B
+			0x3D4, 0x40E, 0x44C, 0x48D
+		]
+		SSG_BASE_PITCHES = [
+		#   C2     C#2    D2     D#2    E2     F2
+			65.41, 69.30, 73.42, 77.78, 82.41, 87.31,
+		#   F#2    G2     G#2     A2     A#2     B2
+			92.50, 98.00, 103.83, 110.0, 116.54, 123.47
+		]
+
+		if note == 12: # C is expressed as 12 instead than 0
+			note = 0
+			if isinstance(octave, int): 
+				octave += 1
+				
+		if ch_kind == ChannelKind.FM:
+			return FM_PITCH_LUT[note] | (octave << 1)
+		elif ch_kind == ChannelKind.SSG:
+			if octave < 2:
+				self.notes_below_b2_present = True
+				return 0
+			pitch = base_pitch * pow(2,octave-2)
+			return round(250000 / pitch)
+		else: # Channel kind is ADPCMA
+			return 0
+
+	# Get pitch of the current note, the one below it and the one above it by 1 semitone
+	def dmfnote_to_ympitch_range(self, ch_kind: ChannelKind, note: int, octave: int):
+		lower_note = note - 1
+		lower_octave = octave
+		if lower_note < 0: 
+			lower_note = 12 + lower_note
+			lower_octave -= 1
+		if octave < 0:
+			lower_note = 0
+			lower_octave = 0
+
+		higher_note = note + 1
+		higher_octave = octave
+		if higher_note > 11: 
+			higher_note = higher_note - 12
+			higher_octave += 1
+
+		middle_pitch = self.dmfnote_to_ympitch(ch_kind, note, octave)
+		lower_pitch  = self.dmfnote_to_ympitch(ch_kind, lower_note, lower_octave)
+		higher_pitch = self.dmfnote_to_ympitch(ch_kind, higher_note, higher_octave)
+
+		return (middle_pitch, lower_pitch, higher_pitch)
 
 	def compile(self) -> bytearray:
 		"""
