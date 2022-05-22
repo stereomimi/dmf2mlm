@@ -745,10 +745,10 @@ class Module:
 		"""
 		Adds a pitch slide reset at the first row of the first pattern
 		if the channel supports pitch slides.
-		TODO: exclude channels that don't use pitch slides
 		"""
-		if get_channel_kind(ch) == ChannelKind.ADPCMA:
+		if get_channel_kind(ch) == ChannelKind.ADPCMA or self.is_channel_empty(ch):
 			return
+
 		pat_idx = self.pattern_matrix.matrix[ch][0]
 		row = self.patterns[ch][pat_idx].rows[0]
 		pslide_is_set = False
