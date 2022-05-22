@@ -43,7 +43,10 @@ def print_df_info(mod, channels: [int]):
 				inst_lbl = "--"
 				fx_lbl  = ""
 				if row.octave != None:
-					oct_lbl = str(row.octave)
+					if row.note == dmf.Note.C: # Why? don't ask me
+						oct_lbl = str(row.octave+1)
+					else:
+						oct_lbl = str(row.octave)
 				if row.note == dmf.Note.NOTE_OFF:
 					note_lbl = "OF"
 					oct_lbl  = "F"
@@ -132,8 +135,8 @@ if sfx_samples != None:
 	mlm_sdata.add_sfx(sfx_samples, False)
 	print("OK")
 
-print_info(mlm_sdata)
-
+#print_info(mlm_sdata)
+#print_df_info(dmf_modules[0], [0])
 print(f"Compiling... ", end='', flush=True)
 mlm_compiled_sdata = mlm_sdata.compile_sdata()
 mlm_compiled_vrom = mlm_sdata.compile_vrom()
