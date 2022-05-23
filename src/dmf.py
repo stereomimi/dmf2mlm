@@ -854,8 +854,9 @@ class Module:
 			#print("\n==========")
 			#print(vibsec, depth, speed)
 			while curr_patmat_idx != vibsec[END_PMAT] or curr_row_idx != vibsec[END_ROW]:
-				pat_idx = self.pattern_matrix.matrix[ch][i]
+				pat_idx = self.pattern_matrix.matrix[ch][curr_patmat_idx]
 				pat = self.patterns[ch][pat_idx]
+				
 
 				amp = 127 / 15 * depth
 				prd = TICK_PERIODS[speed-1]
