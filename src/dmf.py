@@ -840,7 +840,7 @@ class Module:
 
 		if is_vib_sect_started:
 			vib_sect_info[END_PMAT] = self.pattern_matrix.rows_in_pattern_matrix - 1
-			vib_sect_info[END_ROW]  = pat.rows - 1
+			vib_sect_info[END_ROW]  = len(pat.rows) - 1
 			is_vib_sect_started = False
 			vibrato_sections.append(list(vib_sect_info))
 
