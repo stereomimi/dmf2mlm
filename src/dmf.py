@@ -685,7 +685,7 @@ class Module:
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
 				self.patch_0B_fx(i, j)
 			self.patch_vibrato(i)
-		self.time_info.tick_time_base = 1
+		self.time_info.time_base = 1
 		self.time_info.tick_time_1 = 1
 		self.time_info.tick_time_2 = 1
 
@@ -851,8 +851,8 @@ class Module:
 			speed = vibsec[SETTING] >> 4
 			
 			t = 0
-			#print("\n==========")
-			#print(vibsec, depth, speed)
+			print("\n==========")
+			print(vibsec, depth, speed)
 			while curr_patmat_idx != vibsec[END_PMAT] or curr_row_idx != vibsec[END_ROW]:
 				pat_idx = self.pattern_matrix.matrix[ch][curr_patmat_idx]
 				pat = self.patterns[ch][pat_idx]

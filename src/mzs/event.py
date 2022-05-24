@@ -20,10 +20,10 @@ class SongEvent:
 		while (t > 0):
 			if t > 0x10:
 				comp_data.append(0x03)         # Wait byte command
-				comp_data.append((t-1) & 0xFF) # ticks 
+				comp_data.append(utils.clamp(t-1, 0, 0xFF)) # ticks 
 				t -= 0x100
 			elif t > 0:
-				comp_data.append(0x10 | ((t-1) & 0x0F)) # Wait nibble command
+				comp_data.append(0x10 | utils.clamp(t-1, 0, 0x0F)) # Wait nibble command
 				t -= 0x10
 
 		return comp_data
@@ -402,13 +402,13 @@ class SongComIncPitchOfs(SongCommand):
 		if self.offset > 127 or self.offset < -128:
 			comp_data = bytearray(3)
 			word = utils.signed2unsigned_16(self.offset)
-			comp_data[0] = 0x2A | (t & 1) # 16bit inc pitch ofs
+			comp_data[0] = 0x2A | utils.clamp(t, 0, 1) # 16bit inc pitch ofs
 			comp_data[1] = word & 0xFF
 			comp_data[2] = word >> 8
 		else:
 			comp_data = bytearray(2)
 			byte = utils.signed2unsigned_8(self.offset)
-			comp_data[0] = 0x28 | (t & 1) # 16bit inc pitch ofs
+			comp_data[0] = 0x28 | utils.clamp(t, 0, 1) # 16bit inc pitch ofs
 			comp_data[1] = byte
 		t -= 1
 		comp_data.extend(self._compile_timing(t))

@@ -267,7 +267,7 @@ class Song:
 				# Check all other effects here
 				for effect in row.effects:
 					if effect.code == dmf.EffectCode.SET_FINE_TUNE and effect.value != None:
-						if current_note != None and current_octave != None:
+						if current_note != None and current_octave != None: # Vibrato should go on after a note is stopped?
 							PM = 0 # Middle Pitch idx
 							PL = 1 # Lower Pitch idx
 							PH = 2 # Higher pitch idx
