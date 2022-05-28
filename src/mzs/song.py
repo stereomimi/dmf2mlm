@@ -273,10 +273,10 @@ class Song:
 							PH = 2 # Higher pitch idx
 							prange = self.dmfnote_to_ympitch_range(ch_kind, current_note, current_octave)
 							new_ftune = 0
-							if effect.value > 0x80:
-								new_ftune = (prange[PH] - prange[PM]) * (effect.value - 128) / 127
+							if effect.value >= 0x80:
+								new_ftune = (prange[PH] - prange[PM]) * (effect.value - 128) / 128 # / 127 ? 
 							elif effect.value < 0x80:
-								new_ftune = (prange[PL] - prange[PM]) * (128 - effect.value) / -128
+								new_ftune = -((prange[PL] - prange[PM]) * (128 - effect.value) / -128)
 							new_ftune = round(new_ftune)
 							ftune_ofs = new_ftune - current_fine_tune
 							current_fine_tune = new_ftune
