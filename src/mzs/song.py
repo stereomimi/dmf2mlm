@@ -216,7 +216,10 @@ class Song:
 		current_note   = None
 		current_octave = None
 		current_fine_tune = 0
+		current_vibrato = 0x00 # 0xXY # X: speed, Y: depth
 		sample_bank = 0
+
+		calculated_vibratos = dict() # { 'nX:vY': OtherDataIndex } (X = note, Y: vib. fx value)
 
 		for i in range(len(pattern.rows)):
 			row = pattern.rows[i]
@@ -264,37 +267,41 @@ class Song:
 					if ch_kind == ChannelKind.ADPCMA: mlm_note += sample_bank * 12
 					sub_el.events.append(SongNote(mlm_note))
 
+					# If vibrato is enabled, calculate (or select if it has
+					# already been calculated) the corresponding pitch macro.
+					if (current_vibrato & 0x0F) != 0 and (current_vibrato & 0xF0) != 0:
+						key = f"n{mlm_note}:v{current_vibrato}"
+						if key not in calculated_vibratos:
+							pmacro = self._get_vibrato_pmacro(ch_kind, current_note, current_octave, effect.value)
+							calculated_vibratos[key] = OtherDataIndex(len(self.other_data))
+							print("New pmacro", ch, key)
+							self.other_data.append(pmacro)
+						else:
+							print("reuse pmacro", ch, key)
+							
+						com = SongComSetPitchMacro(calculated_vibratos[key])
+						sub_el.events.append(com)
+
 				# Check all other effects here
 				for effect in row.effects:
 					if effect.code == dmf.EffectCode.VIBRATO and effect.value != None:
+						current_vibrato = effect.value
 						if (effect.value & 0x0F) == 0 or (effect.value & 0xF0) == 0:
 							com = SongComSetPitchMacro(None)
 							sub_el.events.append(com)
 
 						elif current_note != None and current_octave != None: # Vibrato should go on after a note is stopped?
-							PM = 0 # Middle Pitch idx
-							PL = 1 # Lower Pitch idx
-							PH = 2 # Higher pitch idx
-							TICK_PERIODS = [ 60, 32, 21, 16, 13, 11, 9, 9, 7, 7, 6, 5, 5, 5, 5 ]
-
-							prange = self.dmfnote_to_ympitch_range(ch_kind, current_note, current_octave)
-							period = TICK_PERIODS[(effect.value >> 4) - 1]
-							amp = (effect.value & 0x0F) / 15 # 15/15 = 1 semitone
-							if ch_kind == ChannelKind.FM: amp *= 21.0 / 117.0
-							offsets = []
-							for i in range(period):
-								v = sin(i * (2*pi / period))
-								if v > 0: v *= amp * (prange[PH] - prange[PM]) 
-								else:     v *= amp * (prange[PM] - prange[PL])
-								v = utils.clamp(round(v), -128, 127)
-								offsets.append(utils.signed2unsigned_8(v))
-
-							pmacro = ControlMacro()
-							pmacro.length = period
-							pmacro.loop_position = 0
-							pmacro.data = list(offsets) # deep copy
-							com = SongComSetPitchMacro(OtherDataIndex(len(self.other_data)))
-							self.other_data.append(pmacro)
+							mlm_note = self.dmfnote_to_mlmnote(ch_kind, current_note, current_octave)
+							key = f"n{mlm_note}:v{effect.value}"
+							if key not in calculated_vibratos:
+								pmacro = self._get_vibrato_pmacro(ch_kind, current_note, current_octave, effect.value)
+								calculated_vibratos[key] = OtherDataIndex(len(self.other_data))
+								print("New pmacro", ch, key)
+								self.other_data.append(pmacro)
+							else:
+								print("reuse pmacro", ch, key)
+								
+							com = SongComSetPitchMacro(calculated_vibratos[key])
 							sub_el.events.append(com)
 
 					elif effect.code != dmf.EffectCode.SET_SAMPLES_BANK and effect.value != None:
@@ -314,6 +321,7 @@ class Song:
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
 			if do_end_pattern: break
 
+		print(calculated_vibratos)
 		utils.list_top(sub_el.events).timing += ticks_since_last_com
 		
 		# do_not_end_pattern is enabled by effects that
@@ -322,6 +330,30 @@ class Song:
 		if not do_end_pattern:
 			sub_el.events.append(SongComReturnFromSubEL())
 		return sub_el
+
+	def _get_vibrato_pmacro(self, ch_kind, current_note, current_octave, fx_value) -> ControlMacro:
+		PM = 0 # Middle Pitch idx
+		PL = 1 # Lower Pitch idx
+		PH = 2 # Higher pitch idx
+		TICK_PERIODS = [ 60, 32, 21, 16, 13, 11, 9, 9, 7, 7, 6, 5, 5, 5, 5 ]
+
+		prange = self.dmfnote_to_ympitch_range(ch_kind, current_note, current_octave)
+		period = TICK_PERIODS[(fx_value >> 4) - 1]
+		amp = (fx_value & 0x0F) / 15 # 15/15 = 1 semitone
+		if ch_kind == ChannelKind.FM: amp *= 21.0 / 117.0
+		offsets = []
+		for i in range(period):
+			v = sin(i * (2*pi / period))
+			if v > 0: v *= amp * (prange[PH] - prange[PM]) 
+			else:     v *= amp * (prange[PM] - prange[PL])
+			v = utils.clamp(round(v), -128, 127)
+			offsets.append(utils.signed2unsigned_8(v))
+
+		pmacro = ControlMacro()
+		pmacro.length = period
+		pmacro.loop_position = 0
+		pmacro.data = list(offsets) # deep copy
+		return pmacro
 
 	def _ch_reorder(self):
 		DMF2MLM_CH_ORDER = [
