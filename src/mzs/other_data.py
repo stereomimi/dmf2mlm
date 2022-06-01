@@ -30,7 +30,7 @@ class SampleList(OtherData):
 
 		return comp_data
 
-class SSGMacro(OtherData):
+class ControlMacro(OtherData):
 	length: int
 	loop_position: int
 	data: bytearray
@@ -40,13 +40,13 @@ class SSGMacro(OtherData):
 		if macro_val_count == 0:
 			return None
 
-		self = SSGMacro()
+		self = ControlMacro()
 		if not dmacro.loop_enabled:
 			self.loop_position = 0xFF
 		else:
 			self.loop_position = dmacro.loop_position
 
-		if kind == "arp" or macro_val_count == 1:
+		if kind == "byte" or macro_val_count == 1:
 			self.data = bytearray(map(utils.signed2unsigned_8, dmacro.envelope_values))
 			self.length = len(self.data)
 

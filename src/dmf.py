@@ -684,7 +684,7 @@ class Module:
 			self.patch_pslide_reset(i)
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
 				self.patch_0B_fx(i, j)
-			self.patch_vibrato(i)
+
 		self.time_info.time_base = 1
 		self.time_info.tick_time_1 = 1
 		self.time_info.tick_time_2 = 1
@@ -789,91 +789,6 @@ class Module:
 				if not chrow_has_0b:
 					fx = Effect(EffectCode.POS_JUMP, fx_val)
 					self.patterns[i][pat_idx].rows[row_idx].effects.append(fx)
-
-	def patch_vibrato(self, ch: int):
-		"""
-		Converts vibrato effects into set fine tune effects
-		ONLY WORKS WITH AN UNOPTIMIZED PATTERN MATRIX!
-		"""
-		START_PMAT = 0
-		START_ROW  = 1
-		END_PMAT   = 2
-		END_ROW    = 3
-		SETTING    = 4
-		TICK_PERIODS = [
-			60, 32, 21, 16, 13, 11, 9, 9, 7, 7, 6, 5, 5, 5, 5
-		]
-
-		vibrato_sections = [] # [[start_patmat_idx, start_row_idx, end_patmat_idx, end_row_idx, setting], ...]
-		is_vib_sect_started = False
-		vib_sect_info = [0, 0, 0, 0, 0]
-
-		for i in range(self.pattern_matrix.rows_in_pattern_matrix):
-			pat_idx = self.pattern_matrix.matrix[ch][i]
-			pat = self.patterns[ch][pat_idx]
-			for j in range(len(pat.rows)):
-				fx_del_queue = [] 
-
-				for k in range(len(pat.rows[j].effects)):
-					fx = pat.rows[j].effects[k]
-					if fx.code == EffectCode.VIBRATO and fx.value != 0 and fx.value != None:
-						if is_vib_sect_started:
-							vib_sect_info[END_PMAT] = i
-							vib_sect_info[END_ROW]  = j
-							vibrato_sections.append(list(vib_sect_info))
-						vib_sect_info[START_PMAT] = i
-						vib_sect_info[START_ROW]  = j
-						vib_sect_info[SETTING]    = fx.value
-						is_vib_sect_started = True
-
-					elif is_vib_sect_started and (fx.code == EffectCode.VIBRATO or fx.code == EffectCode.POS_JUMP):
-						vib_sect_info[END_PMAT] = i
-						vib_sect_info[END_ROW]  = j
-						is_vib_sect_started = False
-						vibrato_sections.append(list(vib_sect_info)) # deep copy array
-
-					if fx.code == EffectCode.VIBRATO:
-						fx_del_queue.append(k)
-				
-				fx_del_queue.sort(reverse=True)
-				for k in fx_del_queue: pat.rows[j].effects.pop(k)
-
-		if is_vib_sect_started:
-			vib_sect_info[END_PMAT] = self.pattern_matrix.rows_in_pattern_matrix - 1
-			vib_sect_info[END_ROW]  = len(pat.rows) - 1
-			is_vib_sect_started = False
-			vibrato_sections.append(list(vib_sect_info))
-
-		for vibsec in vibrato_sections:
-			curr_patmat_idx = vibsec[START_PMAT]
-			curr_row_idx    = vibsec[START_ROW]
-			depth = vibsec[SETTING] & 0x0F
-			speed = vibsec[SETTING] >> 4
-			
-			t = 0
-			print("\n==========")
-			print(vibsec, depth, speed)
-			while curr_patmat_idx != vibsec[END_PMAT] or curr_row_idx != vibsec[END_ROW]:
-				pat_idx = self.pattern_matrix.matrix[ch][curr_patmat_idx]
-				pat = self.patterns[ch][pat_idx]
-				
-
-				amp = 127 / 15 * depth
-				prd = TICK_PERIODS[speed-1]
-				ftune = round(amp * math.sin(2 * math.pi / prd * t) + 128)
-				fx = Effect(EffectCode.SET_FINE_TUNE, ftune)
-				pat.rows[curr_row_idx].effects.append(fx)
-				#print(t, "\t", round(amp, 1), "\t", prd, "\t", ftune)
-
-				t += 1
-				curr_row_idx += 1
-				if curr_row_idx >= len(pat.rows):
-					curr_row_idx = 0
-					curr_patmat_idx += 1
-				
-		#print("====[",ch,"]====")
-		#print(vibrato_sections)
-		#print()
 
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
@@ -987,7 +902,7 @@ def _calculate_ssg_pitch_LUT():
 			LUT.append(SSG_pitch)
 	return LUT
 
-def _convert_fmpitch_to_block(old_pitch: int, new_block: int):
+def convert_fmpitch_to_block(old_pitch: int, new_block: int):
 	"""
 	FNum = 11 * freq * 1048576 / 8000000 / 2^(block-1)
 	thus...
@@ -997,7 +912,7 @@ def _convert_fmpitch_to_block(old_pitch: int, new_block: int):
 	"""
 	if new_block < 0 or new_block >= 8: 
 		raise RuntimeError("Invalid block")
-	if pitch < 0 or pitch > 0x7FF:
+	if old_pitch < 0 or old_pitch > 0x7FF:
 		raise RuntimeError("Invalid pitch")
 	K = 294912.0 / 15625.0
 
@@ -1009,4 +924,4 @@ def _convert_fmpitch_to_block(old_pitch: int, new_block: int):
 	if new_fnum < 0 or new_fnum > 0x7FF:
 		raise RuntimeError("Frequency is outside of block range")
 		
-	return new_fnum | (new_block<<11)
+	return round(new_fnum) | (new_block<<11)

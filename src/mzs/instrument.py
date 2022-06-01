@@ -116,9 +116,9 @@ class SSGInstrument(Instrument):
 	def from_dmf_inst(dinst: dmf.STDInstrument, odata_count: int):
 		self = SSGInstrument()
 		self.mixing = SSGInstrument._get_mix_from_dinst(dinst)
-		mix_odata = SSGMacro.from_dmf_macro(dinst.chmode_macro, "mix")
-		vol_odata = SSGMacro.from_dmf_macro(dinst.volume_macro, "vol")
-		arp_odata = SSGMacro.from_dmf_macro(dinst.arpeggio_macro, "arp")
+		mix_odata = ControlMacro.from_dmf_macro(dinst.chmode_macro, "mix")
+		vol_odata = ControlMacro.from_dmf_macro(dinst.volume_macro, "vol")
+		arp_odata = ControlMacro.from_dmf_macro(dinst.arpeggio_macro, "byte")
 
 		new_odata = []
 		if mix_odata != None:

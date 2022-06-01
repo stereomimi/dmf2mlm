@@ -266,22 +266,36 @@ class Song:
 
 				# Check all other effects here
 				for effect in row.effects:
-					if effect.code == dmf.EffectCode.SET_FINE_TUNE and effect.value != None:
-						if current_note != None and current_octave != None: # Vibrato should go on after a note is stopped?
+					if effect.code == dmf.EffectCode.VIBRATO and effect.value != None:
+						if (effect.value & 0x0F) == 0 or (effect.value & 0xF0) == 0:
+							com = SongComSetPitchMacro(None)
+							sub_el.events.append(com)
+
+						elif current_note != None and current_octave != None: # Vibrato should go on after a note is stopped?
 							PM = 0 # Middle Pitch idx
 							PL = 1 # Lower Pitch idx
 							PH = 2 # Higher pitch idx
+							TICK_PERIODS = [ 60, 32, 21, 16, 13, 11, 9, 9, 7, 7, 6, 5, 5, 5, 5 ]
+
 							prange = self.dmfnote_to_ympitch_range(ch_kind, current_note, current_octave)
-							new_ftune = 0
-							if effect.value >= 0x80:
-								new_ftune = (prange[PH] - prange[PM]) * (effect.value - 128) / 128 
-							elif effect.value < 0x80:
-								new_ftune = -((prange[PL] - prange[PM]) * (128 - effect.value) / -128)
-							new_ftune = new_ftune / 21 * 7 # Deflemask compatibility magic number. Don't ask me why this is needed
-							new_ftune = round(new_ftune)
-							ftune_ofs = new_ftune - current_fine_tune
-							current_fine_tune = new_ftune
-							sub_el.events.append(SongComIncPitchOfs(ftune_ofs))
+							period = TICK_PERIODS[(effect.value >> 4) - 1]
+							amp = (effect.value & 0x0F) / 15 # 15/15 = 1 semitone
+							if ch_kind == ChannelKind.FM: amp *= 21.0 / 117.0
+							offsets = []
+							for i in range(period):
+								v = sin(i * (2*pi / period))
+								if v > 0: v *= amp * (prange[PH] - prange[PM]) 
+								else:     v *= amp * (prange[PM] - prange[PL])
+								v = utils.clamp(round(v), -128, 127)
+								offsets.append(utils.signed2unsigned_8(v))
+
+							pmacro = ControlMacro()
+							pmacro.length = period
+							pmacro.loop_position = 0
+							pmacro.data = list(offsets) # deep copy
+							com = SongComSetPitchMacro(OtherDataIndex(len(self.other_data)))
+							self.other_data.append(pmacro)
+							sub_el.events.append(com)
 
 					elif effect.code != dmf.EffectCode.SET_SAMPLES_BANK and effect.value != None:
 						if effect.code in df_fx_to_mlm_event_map:
@@ -380,13 +394,16 @@ class Song:
 			if octave < 2:
 				self.notes_below_b2_present = True
 				return 0
-			pitch = base_pitch * pow(2,octave-2)
+			pitch = SSG_BASE_PITCHES[note] * pow(2,octave-2)
 			return round(250000 / pitch)
 		else: # Channel kind is ADPCMA
 			return 0
 
 	# Get pitch of the current note, the one below it and the one above it by 1 semitone
+	# In the case of FM, all pitches returned will have the same block.
 	def dmfnote_to_ympitch_range(self, ch_kind: ChannelKind, note: int, octave: int):
+		middle_pitch = self.dmfnote_to_ympitch(ch_kind, note, octave)
+
 		lower_note = note - 1
 		lower_octave = octave
 		if lower_note < 0: 
@@ -395,16 +412,18 @@ class Song:
 		if octave < 0:
 			lower_note = 0
 			lower_octave = 0
+		lower_pitch = self.dmfnote_to_ympitch(ch_kind, lower_note, lower_octave)
+		if ch_kind == ChannelKind.FM and lower_octave != octave:
+			lower_pitch = dmf.convert_fmpitch_to_block(lower_pitch, octave)
 
 		higher_note = note + 1
 		higher_octave = octave
 		if higher_note > 11: 
 			higher_note = higher_note - 12
 			higher_octave += 1
-
-		middle_pitch = self.dmfnote_to_ympitch(ch_kind, note, octave)
-		lower_pitch  = self.dmfnote_to_ympitch(ch_kind, lower_note, lower_octave)
 		higher_pitch = self.dmfnote_to_ympitch(ch_kind, higher_note, higher_octave)
+		if ch_kind == ChannelKind.FM and higher_octave != octave:
+			higher_pitch = dmf.convert_fmpitch_to_block(higher_pitch, octave)
 
 		return (middle_pitch, lower_pitch, higher_pitch)
 

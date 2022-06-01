@@ -1,6 +1,7 @@
 import itertools
 from ..defs import *
 from ..sym_table import *
+from .other_data import ControlMacro, OtherDataIndex
 from .. import utils
 from dataclasses import dataclass
 from typing import Optional
@@ -387,32 +388,22 @@ class SongComFMTL4Set(SongCommand):
 		return comp_data
 
 @dataclass
-class SongComIncPitchOfs(SongCommand):
-	"""
-	Song Command Increment pitch offset
-	------------------------------
-	Set's the ADPCM-A master volume
-	"""
-	offset: int
-	
-	def compile(self, ch, _symbols, _head_ofs):
-		comp_data = None
-		t = self.timing
-		
-		if self.offset > 127 or self.offset < -128:
-			comp_data = bytearray(3)
-			word = utils.signed2unsigned_16(self.offset)
-			comp_data[0] = 0x2A | utils.clamp(t, 0, 1) # 16bit inc pitch ofs
-			comp_data[1] = word & 0xFF
-			comp_data[2] = word >> 8
-		else:
-			comp_data = bytearray(2)
-			byte = utils.signed2unsigned_8(self.offset)
-			comp_data[0] = 0x28 | utils.clamp(t, 0, 1) # 16bit inc pitch ofs
-			comp_data[1] = byte
-		t -= 1
-		comp_data.extend(self._compile_timing(t))
+class SongComSetPitchMacro(SongCommand):
+	macro: OtherDataIndex
 
+	def compile(self, ch: int, symbols, head_ofs) -> bytearray:
+		comp_data = bytearray()
+		comp_data.append(0x28) # Set pitch macro command 
+		
+		if self.macro == None: # Resets pitch macro
+			comp_data.append(0x00) 
+			comp_data.append(0x00)
+		else:
+			sym_name = self.macro.get_sym_name()
+			symbols.add_sym_ref(sym_name, head_ofs + len(comp_data))
+			comp_data.append(0xFF) # Dest. Addr LSB (Placeholder)
+			comp_data.append(0xFF) # Dest. Addr MSB (Placeholder)
+		comp_data.extend(self._compile_timing())
 		return comp_data
 
 @dataclass
