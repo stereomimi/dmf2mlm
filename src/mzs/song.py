@@ -252,6 +252,8 @@ class Song:
 						sub_el.events.append(SongComOffsetChannelVol(volume_offset))
 					else:
 						mlm_volume = Song.ymvol_to_mlmvol(ch_kind, row.volume)
+						if ch_kind == ChannelKind.SSG: # Deflemask compatibility bandaid
+							mlm_volume = max(ceil(mlm_volume - 3*16), 0x01)
 						sub_el.events.append(SongComSetChannelVol(mlm_volume))
 					current_volume = row.volume
 					
