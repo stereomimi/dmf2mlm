@@ -128,13 +128,9 @@ class SongComSetChannelVol(SongCommand):
 	def compile(self, ch: int, _symbols, _head_ofs) -> bytearray:
 		comp_data = bytearray()
 
-		if ch < 0x0A: # FM & ADPCMA
-			comp_data.append(0x05)        # Set channel volume command
-			comp_data.append(self.volume)
-			comp_data.extend(self._compile_timing())
-		else:
-			comp_data.append(0x30 | (self.volume >> 4))
-			comp_data.extend(self._compile_timing())
+		comp_data.append(0x05)        
+		comp_data.append(self.volume)
+		comp_data.extend(self._compile_timing())
 
 		return comp_data
 

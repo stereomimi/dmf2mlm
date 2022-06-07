@@ -253,7 +253,7 @@ class Song:
 					else:
 						mlm_volume = Song.ymvol_to_mlmvol(ch_kind, row.volume)
 						if ch_kind == ChannelKind.SSG: # Deflemask compatibility bandaid
-							mlm_volume = max(ceil(mlm_volume - 3*16), 0x01)
+							mlm_volume = max(ceil(mlm_volume - 3*16), 0x10)
 						sub_el.events.append(SongComSetChannelVol(mlm_volume))
 					current_volume = row.volume
 					
@@ -276,10 +276,7 @@ class Song:
 						if key not in calculated_vibratos:
 							pmacro = self._get_vibrato_pmacro(ch_kind, current_note, current_octave, effect.value)
 							calculated_vibratos[key] = OtherDataIndex(len(self.other_data))
-							print("New pmacro", ch, key)
 							self.other_data.append(pmacro)
-						else:
-							print("reuse pmacro", ch, key)
 							
 						com = SongComSetPitchMacro(calculated_vibratos[key])
 						sub_el.events.append(com)
@@ -298,10 +295,7 @@ class Song:
 							if key not in calculated_vibratos:
 								pmacro = self._get_vibrato_pmacro(ch_kind, current_note, current_octave, effect.value)
 								calculated_vibratos[key] = OtherDataIndex(len(self.other_data))
-								print("New pmacro", ch, key)
 								self.other_data.append(pmacro)
-							else:
-								print("reuse pmacro", ch, key)
 								
 							com = SongComSetPitchMacro(calculated_vibratos[key])
 							sub_el.events.append(com)
@@ -323,7 +317,6 @@ class Song:
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
 			if do_end_pattern: break
 
-		print(calculated_vibratos)
 		utils.list_top(sub_el.events).timing += ticks_since_last_com
 		
 		# do_not_end_pattern is enabled by effects that
