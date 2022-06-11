@@ -279,7 +279,8 @@ class PatternRow:
 
 		for i in range(effect_count):
 			code = EffectCode(data[head_ofs] | (data[head_ofs+1] << 8))
-			if code in supported_effects:
+			#if code in supported_effects:
+			if True:
 				value = data[head_ofs+2] | (data[head_ofs+3] << 8)
 				if code != EffectCode.EMPTY:
 					row.effects.append(Effect(code, value))
@@ -368,7 +369,7 @@ class Pattern:
 		return True
 
 class PatternMatrix:
-	rows_per_pattern: int
+	rows_per_pattern: int # Patches may make this value outdated
 	rows_in_pattern_matrix: int
 	matrix: [[int]] # pattern_matrix[channel][row]
 
@@ -714,14 +715,29 @@ class Module:
 			row = old_pat.rows[i]
 			end_of_row_fx_idxs = []
 			end_of_row_fxs = []
+			fx_del_queue = [] # by fx idx
 
-			# Some pattern are executed at the *end* of a tick, not
-			# the start. Those need to be appropiately dealt with.
-			#   Find all the indexes of said effects.
 			for j in range(len(row.effects)):
 				fx = row.effects[j]
+
+				# Some pattern are executed at the *end* of a tick, not
+				# the start. Those need to be appropiately dealt with.
+				#   Find all the indexes of said effects.
 				if fx.code == EffectCode.POS_JUMP:
 					end_of_row_fx_idxs.append(j)
+
+				# Deal with set speed tick speed effects at this stage
+				elif fx.code == EffectCode.SET_SPEED_1 and fx.value != None:
+					speed1 = fx.value * self.time_info.time_base
+					fx_del_queue.append(j)
+				elif fx.code == EffectCode.SET_SPEED_2 and fx.value != None:
+					speed2 = fx.value * self.time_info.time_base
+					fx_del_queue.append(j)
+
+			# Delete all effects that were already dealt with
+			fx_del_queue.sort(reverse=True)
+			for idx in fx_del_queue:
+				row.effects.pop(idx)
 
 			# Reverse the index list as to not have to deal with
 			# needed element indexes changing. Pop away all the indexes
@@ -739,7 +755,7 @@ class Module:
 			extended_pat.rows[-1].effects.extend(end_of_row_fxs)
 
 		self.patterns[ch][pat_idx] = extended_pat
-		self.pattern_matrix.rows_per_pattern = len(extended_pat.rows)
+		#self.pattern_matrix.rows_per_pattern = len(extended_pat.rows)
 
 	def patch_pslide_reset(self, ch: int):
 		"""
