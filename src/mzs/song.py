@@ -218,6 +218,7 @@ class Song:
 		current_fine_tune = 0
 		current_vibrato = 0x00 # 0xXY # X: speed, Y: depth
 		sample_bank = 0
+		is_p2n_fx_in_row = False
 
 		calculated_vibratos = dict() # { 'nX:vY': OtherDataIndex } (X = note, Y: vib. fx value)
 
@@ -230,12 +231,25 @@ class Song:
 				last_com.timing += ticks_since_last_com
 				ticks_since_last_com = 0
 
-				# Check for sample bank switches before
-				# possibly using samples
+				# Effects that need to be checked first
 				for effect in row.effects:
 					if effect.code == dmf.EffectCode.SET_SAMPLES_BANK:
 						if effect.value < ceil(len(self.samples) / 12.0): # If bank actually exists
 							sample_bank = effect.value
+
+					elif effect.code == dmf.EffectCode.PORTA_TO_NOTE and effect.value != None:
+						if row.note != dmf.Note.NOTE_OFF and row.note != None and row.octave != None and current_note != None and current_octave != None:
+							is_p2n_fx_in_row = True
+							limit = self.dmfnote_to_ympitch(ch_kind, row.note, row.octave)
+							if ch_kind == ChannelKind.FM:
+								curr_pitch = self.dmfnote_to_ympitch(ch_kind, current_note, current_octave)
+								curr_block = curr_pitch >> 11
+								limit = dmf.convert_fmpitch_to_block(limit, curr_block)
+							
+							fx = SongComClampedPortamentoSlide(effect.value, limit)
+							sub_el.events.append(fx)
+							current_note = row.note
+							current_octave = row.octave
 
 				if row.note == dmf.Note.NOTE_OFF:
 					sub_el.events.append(SongComNoteOff())
@@ -261,7 +275,7 @@ class Song:
 					current_instrument = row.instrument
 					sub_el.events.append(SongComChangeInstrument(current_instrument))
 
-				if row.note != dmf.Note.NOTE_OFF and row.note != None and row.octave != None:
+				if row.note != dmf.Note.NOTE_OFF and row.note != None and row.octave != None and not is_p2n_fx_in_row:
 					current_note = row.note
 					current_octave = row.octave
 					current_fine_tune = 0
@@ -300,7 +314,7 @@ class Song:
 							com = SongComSetPitchMacro(calculated_vibratos[key])
 							sub_el.events.append(com)
 
-					elif effect.code != dmf.EffectCode.SET_SAMPLES_BANK and effect.value != None:
+					elif effect.code != dmf.EffectCode.SET_SAMPLES_BANK and effect.code != dmf.EffectCode.PORTA_TO_NOTE and effect.value != None:
 						if effect.code in df_fx_to_mlm_event_map:
 							mlm_event = df_fx_to_mlm_event_map[effect.code]
 							sub_el.events.append(mlm_event.from_dffx(effect.value))
@@ -312,7 +326,7 @@ class Song:
 								Song._sub_el_from_pattern.warned_uncomp_fxs.append(effect.code)
 								print(f"\nWARNING: {effect.code.name} effect conversion isn't implemented and will be ignored")
 									
-
+			is_p2n_fx_in_row = False
 			if i % 2 == 0: ticks_since_last_com += time_info.tick_time_1*time_info.time_base
 			else:          ticks_since_last_com += time_info.tick_time_2*time_info.time_base
 			if do_end_pattern: break

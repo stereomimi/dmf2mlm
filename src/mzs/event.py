@@ -208,6 +208,20 @@ class SongComPositionJump(SongCommand):
 		comp_data.append(0xFF) # Dest. Addr MSB (Placeholder)
 		return comp_data
 
+@dataclass
+class SongComClampedPortamentoSlide(SongCommand):
+	offset: int
+	limit: int
+
+	def compile(self, ch: int, _symbols, _head_ofs: int) -> bytearray:
+		comp_data = bytearray()
+		comp_data.append(0x0C) # Clamped Portamento Slide command 
+		comp_data.append(self.offset)
+		comp_data.append(self.limit & 0xFF)
+		comp_data.append(self.limit >> 8)
+		comp_data.extend(self._compile_timing())
+		return comp_data
+
 class SongComYM2610PortWriteA(SongCommand):
 	"""
 	Song Command YM2610 Port Write A

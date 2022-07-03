@@ -691,7 +691,6 @@ class Module:
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			self.patch_pslide_reset(i)
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
-				#self.patch_0B_fx(i, j)
 				self.patch_fx_extend(EffectCode.POS_JUMP, i, j)
 
 		self.time_info.time_base = 1
@@ -807,7 +806,7 @@ class Module:
 				chrow_has_fx = False
 				for j in range(len(self.patterns[i][pat_idx].rows[row_idx].effects)):
 					if row.effects[j].code == fx_code:
-						chrow_has_0b = True
+						chrow_has_fx = True
 						if row.effects[j].value != fx_val:
 							raise RuntimeError(f"Clashing {fx_code} effect at ch {i}, matrix row {patmat_row}, row {row_idx}")
 				if not chrow_has_fx:
