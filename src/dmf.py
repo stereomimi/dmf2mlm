@@ -678,13 +678,21 @@ class Module:
 	def patch_for_mzs(self):
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			self.patch_unoptimize_pat_matrix(i)
+		
+		for i in range(SYSTEM_TOTAL_CHANNELS):
+			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
+				self.patch_fx_extend(EffectCode.SET_SPEED_1, i, j)
+				self.patch_fx_extend(EffectCode.SET_SPEED_2, i, j)
+
+		for i in range(SYSTEM_TOTAL_CHANNELS):
 			for j in range(len(self.patterns[i])):
 				self.patch_extend_pattern(i, j)
 		
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			self.patch_pslide_reset(i)
 			for j in range(self.pattern_matrix.rows_in_pattern_matrix):
-				self.patch_0B_fx(i, j)
+				#self.patch_0B_fx(i, j)
+				self.patch_fx_extend(EffectCode.POS_JUMP, i, j)
 
 		self.time_info.time_base = 1
 		self.time_info.tick_time_1 = 1
@@ -776,11 +784,11 @@ class Module:
 			pslide_reset = Effect(EffectCode.PORTAMENTO_UP, 0)
 			row.effects.append(pslide_reset)
 
-	def patch_0B_fx(self, ch: int, patmat_row: int):
+	def patch_fx_extend(self, fx_code: EffectCode, ch: int, patmat_row: int):
 		"""
-		If there's a $0B (Position Jump) effect, add one
+		If there's a <fx_code> effect, add one
 		to every nonempty channel in the same row. 
-		|C1 0B02|D4 ----|E2 0400| -> |C1 0B02|D4 0B02|E2 0400 0B02|
+		|C1 0B02|D4 ----|E2 0400| -(fx_code: $0B)-> |C1 0B02|D4 0B02|E2 0400 0B02|
 
 		ONLY WORKS WITH AN UNOPTIMIZED PATTERN MATRIX!
 		"""
@@ -788,24 +796,24 @@ class Module:
 		pat = self.patterns[ch][pat_idx]
 		for i in range(len(pat.rows)):
 			for j in range(len(pat.rows[i].effects)):
-				if pat.rows[i].effects[j].code == EffectCode.POS_JUMP:
-					self.apply_0B_fx_patch(patmat_row, i, pat.rows[i].effects[j].value)
+				if pat.rows[i].effects[j].code == fx_code:
+					self.apply_fx_ext_patch(fx_code, patmat_row, i, pat.rows[i].effects[j].value)
 
-	def apply_0B_fx_patch(self, patmat_row: int, row_idx: int, fx_val: int):
+	def apply_fx_ext_patch(self, fx_code: EffectCode, patmat_row: int, row_idx: int, fx_val: int):
 		for i in range(SYSTEM_TOTAL_CHANNELS):
 			if not self.is_channel_empty(i):
 				pat_idx = self.pattern_matrix.matrix[i][patmat_row]
 				row = self.patterns[i][pat_idx].rows[row_idx]
-				chrow_has_0b = False
+				chrow_has_fx = False
 				for j in range(len(self.patterns[i][pat_idx].rows[row_idx].effects)):
-					if row.effects[j].code == EffectCode.POS_JUMP:
+					if row.effects[j].code == fx_code:
 						chrow_has_0b = True
 						if row.effects[j].value != fx_val:
-							raise RuntimeError(f"Clashing $0B effect at ch {i}, matrix row {patmat_row}, row {row_idx}")
-				if not chrow_has_0b:
-					fx = Effect(EffectCode.POS_JUMP, fx_val)
+							raise RuntimeError(f"Clashing {fx_code} effect at ch {i}, matrix row {patmat_row}, row {row_idx}")
+				if not chrow_has_fx:
+					fx = Effect(fx_code, fx_val)
 					self.patterns[i][pat_idx].rows[row_idx].effects.append(fx)
-
+				
 	def optimize(self):
 		for ch in range(SYSTEM_TOTAL_CHANNELS):
 			self.optimize_equal_patterns(ch)
@@ -814,7 +822,6 @@ class Module:
 	def optimize_equal_patterns(self, ch: int):
 		"""
 		Merges equal patterns and updates the pattern matrix accordingly
-		BROKEN?
 		"""
 		patterns_with_ids = [] # [(pattern, id); ...]
 		new_pattern_list = []
@@ -928,7 +935,7 @@ def convert_fmpitch_to_block(old_pitch: int, new_block: int):
 	"""
 	if new_block < 0 or new_block >= 8: 
 		raise RuntimeError("Invalid block")
-	if old_pitch < 0 or old_pitch > 0x7FF:
+	if old_pitch < 0 or old_pitch > 0x3FFF:
 		raise RuntimeError("Invalid pitch")
 	K = 294912.0 / 15625.0
 
