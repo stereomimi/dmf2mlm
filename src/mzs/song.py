@@ -274,7 +274,7 @@ class Song:
 					if (current_vibrato & 0x0F) != 0 and (current_vibrato & 0xF0) != 0:
 						key = f"n{mlm_note}:v{current_vibrato}"
 						if key not in calculated_vibratos:
-							pmacro = self._get_vibrato_pmacro(ch_kind, current_note, current_octave, effect.value)
+							pmacro = self._get_vibrato_pmacro(ch_kind, current_note, current_octave, current_vibrato)
 							calculated_vibratos[key] = OtherDataIndex(len(self.other_data))
 							self.other_data.append(pmacro)
 							
