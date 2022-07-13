@@ -217,8 +217,7 @@ class SongComClampedPortamentoSlide(SongCommand):
 		comp_data = bytearray()
 		comp_data.append(0x0C) # Clamped Portamento Slide command 
 		comp_data.append(self.offset)
-		comp_data.append(self.limit & 0xFF)
-		comp_data.append(self.limit >> 8)
+		comp_data.append(self.limit)
 		comp_data.extend(self._compile_timing())
 		return comp_data
 

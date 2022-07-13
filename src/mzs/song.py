@@ -240,11 +240,11 @@ class Song:
 					elif effect.code == dmf.EffectCode.PORTA_TO_NOTE and effect.value != None:
 						if row.note != dmf.Note.NOTE_OFF and row.note != None and row.octave != None and current_note != None and current_octave != None:
 							is_p2n_fx_in_row = True
-							limit = self.dmfnote_to_ympitch(ch_kind, row.note, row.octave)
+							limit = self.dmfnote_to_mlmnote(ch_kind, row.note, row.octave)
 							if ch_kind == ChannelKind.FM:
 								curr_pitch = self.dmfnote_to_ympitch(ch_kind, current_note, current_octave)
 								curr_block = curr_pitch >> 11
-								limit = dmf.convert_fmpitch_to_block(limit, curr_block)
+								# Just to warn if invalid pitches are caused.
 							
 							fx = SongComClampedPortamentoSlide(effect.value, limit)
 							sub_el.events.append(fx)
