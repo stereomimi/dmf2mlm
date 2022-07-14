@@ -152,12 +152,14 @@ class SongComSetPanning(SongCommand):
 
 	def compile(self, ch, _symbols, _head_ofs):
 		comp_data = bytearray(2)
-		t = self.timing
+		"""t = self.timing
 		
 		comp_data[0] = 0x06           # Set panning command
 		comp_data[1] = (t & 0x3F) | self.panning
-		t -= 0x3F
-		comp_data.extend(self._compile_timing(t))
+		t -= 0x3F"""
+		comp_data[0] = 0x06
+		comp_data[1] = self.panning
+		comp_data.extend(self._compile_timing())
 
 		return comp_data
 
